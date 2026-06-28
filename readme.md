@@ -1,56 +1,56 @@
-# Gestionnaire de skins VRM
+# VRM Skin Manager
 
-Ce projet fournit une petite interface graphique pour choisir un skin au format `.vrm`, afficher un aperçu et l’appliquer au personnage.
+This project provides a small graphical interface to choose a skin in `.vrm` format, display a preview and apply it to the character.
 
-## Ce que fait le programme
+## What the program does
 
-- Il lit tous les fichiers `.vrm` présents dans le dossier `skins/`.
-- Il affiche un aperçu du skin sélectionné avec son nom et la taille du fichier.
-- Il génère automatiquement une image d’aperçu dans `apercus/` si elle n’existe pas encore.
-- Quand tu appliques un skin, le fichier `.vrm` choisi est copié à la racine du projet.
-- Avant la copie, les autres fichiers `.vrm` présents à la racine sont supprimés.
+- It reads all `.vrm` files present in the `skins/` folder.
+- It displays a preview of the selected skin with its name and file size.
+- It automatically generates a preview image in `apercus/` if it doesn't exist yet.
+- When you apply a skin, the chosen `.vrm` file is copied to the root of the project.
+- Before copying, any other `.vrm` files present at the root are deleted.
 
-## Ce que font les programmes
+## What the programs do
 
-- `selection.py` est le programme principal. Il affiche l’interface graphique, liste les skins disponibles, montre l’aperçu du skin sélectionné et applique le skin choisi.
-- `genreator.py` génère les images d’aperçu utilisées par l’interface. Il lit le fichier `.vrm` et crée une image stockée dans `apercus/`.
-- Les deux scripts travaillent ensemble : `selection.py` appelle `genreator.py` quand un aperçu doit être créé ou mis à jour.
+- `selection.py` is the main program. It displays the graphical interface, lists available skins, shows the preview of the selected skin and applies the chosen skin.
+- `genreator.py` generates the preview images used by the interface. It reads the `.vrm` file and creates an image stored in `apercus/`.
+- The two scripts work together: `selection.py` calls `genreator.py` when a preview needs to be created or updated.
 
-## Prérequis
+## Prerequisites
 
 - Python 3
-- La bibliothèque Pillow
+- The Pillow library
 
-Installation de Pillow si besoin :
+Installing Pillow if needed:
 
 ```bash
 pip install pillow
 ```
 
-## Lancer l’application
+## Running the application
 
-Depuis le dossier du projet, exécute :
+From the project folder, run:
 
 ```bash
 python selection.py
 ```
 
-## Utilisation
+## Usage
 
-1. Ouvre l’application.
-2. Clique sur un skin dans la liste de gauche.
-3. Vérifie l’aperçu à droite.
-4. Clique sur « Appliquer le skin » pour copier le fichier choisi à la racine du projet.
-5. Utilise « Rafraîchir » si tu ajoutes ou supprimes des fichiers dans `skins/` pendant que l’application est ouverte.
+1. Open the application.
+2. Click on a skin in the list on the left.
+3. Check the preview on the right.
+4. Click on "Apply skin" to copy the chosen file to the root of the project.
+5. Use "Refresh" if you add or remove files in `skins/` while the application is open.
 
-## Structure du projet
+## Project structure
 
-- `selection.py` : interface graphique principale.
-- `genreator.py` : génération des aperçus des skins.
-- `skins/` : dossier qui contient les fichiers `.vrm` disponibles.
-- `apercus/` : dossier qui contient les images d’aperçu générées.
+- `selection.py`: main graphical interface.
+- `genreator.py`: generation of skin previews.
+- `skins/`: folder containing available `.vrm` files.
+- `apercus/`: folder containing generated preview images.
 
 ## Notes
 
-- Le skin appliqué est simplement le fichier `.vrm` copié à la racine du projet.
-- Si aucun fichier `.vrm` n’est présent dans `skins/`, la liste reste vide.
+- The applied skin is simply the `.vrm` file copied to the root of the project.
+- If no `.vrm` file is present in `skins/`, the list remains empty.

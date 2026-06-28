@@ -66,7 +66,7 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
         PREVIEW_GENERATOR.generate_preview(skin_path.name)
 
     apercu = tk.Toplevel()
-    apercu.title(f"Aperçu - {skin_path.name}")
+    apercu.title(f"Preview - {skin_path.name}")
     apercu.geometry("420x320")
     apercu.resizable(False, False)
     apercu.transient()
@@ -74,7 +74,7 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
 
     tk.Label(
         apercu,
-        text="Aperçu du skin sélectionné",
+        text="Preview of selected skin",
         font=("TkDefaultFont", 11, "bold"),
     ).pack(pady=(14, 8))
 
@@ -96,19 +96,19 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
         except Exception:
             tk.Label(
                 zone_image,
-                text="Image du skin indisponible",
+                text="Skin image unavailable",
                 fg="gray",
             ).pack()
     else:
         tk.Label(
             zone_image,
-            text="Aucune image d'aperçu n'a pu être générée",
+            text="No preview image could be generated",
             fg="gray",
         ).pack()
 
     infos = [
-        f"Nom : {skin_path.name}",
-        f"Taille : {taille_ko:.1f} Ko",
+        f"Name: {skin_path.name}",
+        f"Size: {taille_ko:.1f} Ko",
     ]
 
     for texte in infos:
@@ -127,8 +127,8 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
 
     boutons = tk.Frame(apercu)
     boutons.pack(fill="x", padx=14, pady=(0, 14))
-    tk.Button(boutons, text="Annuler", command=annuler).pack(side="right")
-    tk.Button(boutons, text="Appliquer", command=confirmer).pack(side="right", padx=8)
+    tk.Button(boutons, text="Cancel", command=annuler).pack(side="right")
+    tk.Button(boutons, text="Apply", command=confirmer).pack(side="right", padx=8)
 
     apercu.wait_window()
     return resultat["ok"]
@@ -137,14 +137,14 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
 class Application(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Gestionnaire de skins VRM")
+        self.title("VRM Skin Manager")
         self.geometry("960x540")
         self.minsize(860, 480)
         self.preview_image = None
 
         self.label_info = tk.Label(
             self,
-            text=f"Dossier des skins : {SKINS_DIR}",
+            text=f"Skins folder: {SKINS_DIR}",
             anchor="w",
             justify="left",
         )
@@ -158,7 +158,7 @@ class Application(tk.Tk):
 
         self.current_applied_label = tk.Label(
             liste_frame,
-            text="Skin actuellement appliqué : aucun",
+            text="Currently applied skin: none",
             anchor="w",
             justify="left",
             fg="#1b5e20",
@@ -169,12 +169,12 @@ class Application(tk.Tk):
         self.listbox.pack(fill="both", expand=True)
         self.listbox.bind("<<ListboxSelect>>", self.on_skin_selected)
 
-        preview_frame = tk.LabelFrame(contenu, text="Prévisualisation", padx=12, pady=12)
+        preview_frame = tk.LabelFrame(contenu, text="Preview", padx=12, pady=12)
         preview_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
 
         self.preview_nom = tk.Label(
             preview_frame,
-            text="Clique sur un skin pour voir l'aperçu.",
+            text="Click on a skin to see the preview.",
             anchor="w",
             justify="left",
         )
@@ -182,7 +182,7 @@ class Application(tk.Tk):
 
         self.preview_image_label = tk.Label(
             preview_frame,
-            text="Aucune image",
+            text="No image",
             fg="gray",
         )
         self.preview_image_label.pack(fill="both", expand=True)
@@ -199,12 +199,12 @@ class Application(tk.Tk):
         boutons.pack(fill="x", padx=10, pady=(0, 10))
 
         self.btn_rafraichir = tk.Button(
-            boutons, text="Rafraîchir", command=self.rafraichir
+            boutons, text="Refresh", command=self.rafraichir
         )
         self.btn_rafraichir.pack(side="left")
 
         self.btn_appliquer = tk.Button(
-            boutons, text="Appliquer le skin", command=self.on_appliquer
+            boutons, text="Apply skin", command=self.on_appliquer
         )
         self.btn_appliquer.pack(side="right")
 
@@ -223,8 +223,8 @@ class Application(tk.Tk):
 
     def afficher_etat_vide(self) -> None:
         self.preview_image = None
-        self.preview_nom.config(text="Clique sur un skin pour voir l'aperçu.")
-        self.preview_image_label.config(image="", text="Aucune image", fg="gray")
+        self.preview_nom.config(text="Click on a skin to see the preview.")
+        self.preview_image_label.config(image="", text="No image", fg="gray")
         self.preview_taille.config(text="")
 
     def skin_applique_actuel(self) -> Optional[Path]:
@@ -244,10 +244,10 @@ class Application(tk.Tk):
     def mettre_en_evidence_skin_applique(self) -> None:
         skin_applique = self.skin_applique_actuel()
         if skin_applique is None:
-            self.current_applied_label.config(text="Skin actuellement appliqué : aucun")
+            self.current_applied_label.config(text="Currently applied skin: none")
         else:
             self.current_applied_label.config(
-                text=f"Skin actuellement appliqué : {skin_applique.name}"
+                text=f"Currently applied skin: {skin_applique.name}"
             )
 
     def afficher_preview(self, skin_path: Path) -> None:
@@ -257,8 +257,8 @@ class Application(tk.Tk):
         if not preview_path.exists():
             PREVIEW_GENERATOR.generate_preview(skin_path.name)
 
-        self.preview_nom.config(text=f"Nom : {skin_path.name}")
-        self.preview_taille.config(text=f"Taille : {taille_ko:.1f} Ko")
+        self.preview_nom.config(text=f"Name: {skin_path.name}")
+        self.preview_taille.config(text=f"Size: {taille_ko:.1f} Ko")
 
         if preview_path.exists():
             try:
@@ -274,7 +274,7 @@ class Application(tk.Tk):
         self.preview_image = None
         self.preview_image_label.config(
             image="",
-            text="Image du skin indisponible",
+            text="Skin image unavailable",
             fg="gray",
         )
 
@@ -285,7 +285,7 @@ class Application(tk.Tk):
 
         if not skins:
             self.listbox.insert(
-                tk.END, "Aucun fichier .vrm trouvé dans le dossier skins."
+                tk.END, "No .vrm files found in the skins folder."
             )
             self.listbox.config(state="disabled")
             self.btn_appliquer.config(state="disabled")
@@ -329,25 +329,25 @@ class Application(tk.Tk):
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showwarning(
-                "Sélection manquante", "Choisis un skin dans la liste."
+                "Missing selection", "Choose a skin from the list."
             )
             return
 
         nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
-            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            messagebox.showerror("Error", "The selected file no longer exists.")
             self.rafraichir()
             return
 
         try:
             destination = appliquer_skin(skin_path)
             self.status_message.set(
-                f"Skin appliqué : {skin_path.name} a été copié dans {destination}"
+                f"Skin applied: {skin_path.name} has been copied to {destination}"
             )
             self.rafraichir()
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible d'appliquer le skin :\n{exc}")
+            messagebox.showerror("Error", f"Unable to apply skin:\n{exc}")
 
 
 def main() -> None:
