@@ -10,10 +10,9 @@ les images de preview sont stockées dans un dossier "apercus" et le programme v
 import os
 import json
 from pathlib import Path
-try:
-    from PIL import Image, ImageDraw, ImageFont
-except ImportError:
-    raise SystemExit("Erreur: installez Pillow avec 'pip install Pillow' (le module à importer est PIL).")
+
+from PIL import Image, ImageDraw, ImageFont
+
 
 # Chemins des dossiers
 SKINS_FOLDER = "skins"
