@@ -4,7 +4,7 @@ il a pour but d'avoir une interface graphique ou l'utilisateur peut choisir un s
 un skin est un fichier .vrm qui contient les informations de texture et de modèle 3D pour un personnage
 quand un skin est choisi, le programme va le déplacer dans le dossier courant et il supprimera l'ancien skin si il existe dans le dossier courant
 la liste des skins disponibles est stockée dans un dossier "skins" et le programme va lire ce dossier pour afficher les skins disponibles
-quand on selection un skin on doit avoir un apercu du skin avant de l'appliquer
+quand on clique sur un skin on doit avoir un aperçu du skin à coté de la liste des skins,
 l'apperçu doit avoir le nom du skin, une image du skin et la taille du fichier
 
 """
