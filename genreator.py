@@ -3,18 +3,18 @@ Ce programme génère des aperçus visuels pour les skins .vrm.
 La liste des skins disponibles est stockée dans un dossier "skins".
 Le programme lit ce dossier pour afficher les skins disponibles.
 Quand on sélectionne un skin, on doit avoir un aperçu du skin avant de l'appliquer.
-L'aperçu doit utiliser la vraie texture du VRM quand elle est embarquée dans le fichier,
-et être stocké dans le dossier "apercus".
+L'aperçu doit montrer le skin assemblé, pas seulement ses textures brutes.
 """
 
 import base64
 import io
 import json
+import math
 import os
 import struct
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 
 class AvatarPreviewGenerator:
@@ -22,6 +22,7 @@ class AvatarPreviewGenerator:
         self.skins_dir = Path(skins_dir)
         self.preview_dir = Path(preview_dir)
         self.preview_dir.mkdir(parents=True, exist_ok=True)
+        self._texture_cache = {}
         
     def get_available_skins(self):
         """Retourne la liste des skins disponibles"""
@@ -32,16 +33,16 @@ class AvatarPreviewGenerator:
     def get_file_size(self, filepath):
         """Retourne la taille du fichier en MB"""
         return os.path.getsize(filepath) / (1024 * 1024)
-    
-    def _extract_image_bytes_from_vrm(self, skin_path):
-        """Extrait la première image embarquée dans un fichier VRM/GLB."""
+
+    def _load_glb(self, skin_path):
+        """Charge le JSON et le bloc binaire d'un fichier GLB/VRM."""
         data = skin_path.read_bytes()
         if len(data) < 20 or data[:4] != b"glTF":
-            return None
+            return None, None
 
         _, version, _ = struct.unpack_from("<4sII", data, 0)
         if version != 2:
-            return None
+            return None, None
 
         offset = 12
         json_chunk = None
@@ -59,64 +60,405 @@ class AvatarPreviewGenerator:
                 bin_chunk = chunk_data
 
         if not json_chunk:
+            return None, None
+
+        try:
+            return json.loads(json_chunk), bin_chunk
+        except json.JSONDecodeError:
+            return None, None
+
+    def _identity_matrix(self):
+        return [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+
+    def _matrix_multiply(self, left, right):
+        result = [[0.0, 0.0, 0.0, 0.0] for _ in range(4)]
+        for row in range(4):
+            for column in range(4):
+                result[row][column] = sum(
+                    left[row][index] * right[index][column] for index in range(4)
+                )
+        return result
+
+    def _matrix_vector(self, matrix, vector):
+        x, y, z, w = vector
+        return (
+            matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z + matrix[0][3] * w,
+            matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z + matrix[1][3] * w,
+            matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z + matrix[2][3] * w,
+            matrix[3][0] * x + matrix[3][1] * y + matrix[3][2] * z + matrix[3][3] * w,
+        )
+
+    def _translation_matrix(self, values):
+        matrix = self._identity_matrix()
+        matrix[0][3], matrix[1][3], matrix[2][3] = values
+        return matrix
+
+    def _scale_matrix(self, values):
+        matrix = self._identity_matrix()
+        matrix[0][0], matrix[1][1], matrix[2][2] = values
+        return matrix
+
+    def _quaternion_matrix(self, values):
+        x, y, z, w = values
+        xx = x * x
+        yy = y * y
+        zz = z * z
+        xy = x * y
+        xz = x * z
+        yz = y * z
+        wx = w * x
+        wy = w * y
+        wz = w * z
+
+        return [
+            [1 - 2 * (yy + zz), 2 * (xy - wz), 2 * (xz + wy), 0.0],
+            [2 * (xy + wz), 1 - 2 * (xx + zz), 2 * (yz - wx), 0.0],
+            [2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (xx + yy), 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+
+    def _node_local_matrix(self, node):
+        if "matrix" in node:
+            raw = node["matrix"]
+            return [
+                [raw[0], raw[4], raw[8], raw[12]],
+                [raw[1], raw[5], raw[9], raw[13]],
+                [raw[2], raw[6], raw[10], raw[14]],
+                [raw[3], raw[7], raw[11], raw[15]],
+            ]
+
+        matrix = self._identity_matrix()
+        if "translation" in node:
+            matrix = self._matrix_multiply(matrix, self._translation_matrix(node["translation"]))
+        if "rotation" in node:
+            matrix = self._matrix_multiply(matrix, self._quaternion_matrix(node["rotation"]))
+        if "scale" in node:
+            matrix = self._matrix_multiply(matrix, self._scale_matrix(node["scale"]))
+        return matrix
+
+    def _component_info(self, component_type):
+        mapping = {
+            5120: ("b", 1),
+            5121: ("B", 1),
+            5122: ("h", 2),
+            5123: ("H", 2),
+            5125: ("I", 4),
+            5126: ("f", 4),
+        }
+        return mapping.get(component_type)
+
+    def _type_size(self, type_name):
+        return {
+            "SCALAR": 1,
+            "VEC2": 2,
+            "VEC3": 3,
+            "VEC4": 4,
+            "MAT4": 16,
+        }.get(type_name, 1)
+
+    def _read_accessor(self, gltf, bin_chunk, accessor_index):
+        accessors = gltf.get("accessors", [])
+        buffer_views = gltf.get("bufferViews", [])
+        if accessor_index is None or accessor_index >= len(accessors):
+            return []
+
+        accessor = accessors[accessor_index]
+        buffer_view_index = accessor.get("bufferView")
+        if buffer_view_index is None or buffer_view_index >= len(buffer_views):
+            return []
+
+        buffer_view = buffer_views[buffer_view_index]
+        component = self._component_info(accessor.get("componentType"))
+        if component is None:
+            return []
+
+        fmt_char, component_size = component
+        type_count = self._type_size(accessor.get("type", "SCALAR"))
+        count = accessor.get("count", 0)
+        offset = buffer_view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
+        stride = buffer_view.get("byteStride", component_size * type_count)
+
+        values = []
+        if stride == component_size * type_count:
+            fmt = "<" + (fmt_char * type_count)
+            for index in range(count):
+                values.append(struct.unpack_from(fmt, bin_chunk, offset + index * stride))
+        else:
+            for index in range(count):
+                start = offset + index * stride
+                values.append(
+                    struct.unpack_from("<" + (fmt_char * type_count), bin_chunk, start)
+                )
+
+        if accessor.get("type", "SCALAR") == "SCALAR":
+            return [item[0] for item in values]
+        return values
+
+    def _load_texture(self, gltf, bin_chunk, texture_index):
+        if texture_index is None:
+            return None
+
+        textures = gltf.get("textures", [])
+        images = gltf.get("images", [])
+        if texture_index >= len(textures):
+            return None
+
+        image_index = textures[texture_index].get("source")
+        if image_index is None or image_index >= len(images):
+            return None
+
+        cache_key = (id(bin_chunk), image_index)
+        cached = self._texture_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        image_info = images[image_index]
+        image_bytes = None
+        uri = image_info.get("uri")
+        if uri:
+            if uri.startswith("data:") and "," in uri:
+                _, encoded = uri.split(",", 1)
+                image_bytes = base64.b64decode(encoded)
+            else:
+                image_bytes = None
+
+        if image_bytes is None:
+            buffer_view_index = image_info.get("bufferView")
+            if buffer_view_index is not None and buffer_view_index < len(gltf.get("bufferViews", [])):
+                buffer_view = gltf["bufferViews"][buffer_view_index]
+                start = buffer_view.get("byteOffset", 0)
+                length = buffer_view.get("byteLength", 0)
+                image_bytes = bin_chunk[start : start + length]
+
+        if image_bytes is None:
             return None
 
         try:
-            gltf = json.loads(json_chunk)
-        except json.JSONDecodeError:
+            texture = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        except Exception:
             return None
 
-        images = gltf.get("images", [])
-        buffer_views = gltf.get("bufferViews", [])
+        self._texture_cache[cache_key] = texture
+        return texture
 
-        for image_info in images:
-            image_bytes = None
+    def _sample_texture(self, texture, u, v):
+        if texture is None:
+            return (208, 208, 208, 255)
 
-            uri = image_info.get("uri")
-            if uri:
-                if uri.startswith("data:") and "," in uri:
-                    _, encoded = uri.split(",", 1)
-                    image_bytes = base64.b64decode(encoded)
-                else:
-                    external_path = (skin_path.parent / uri).resolve()
-                    if external_path.exists():
-                        image_bytes = external_path.read_bytes()
+        width, height = texture.size
+        if width <= 0 or height <= 0:
+            return (208, 208, 208, 255)
 
-            if image_bytes is None and bin_chunk is not None:
-                buffer_view_index = image_info.get("bufferView")
-                if buffer_view_index is not None and 0 <= buffer_view_index < len(buffer_views):
-                    buffer_view = buffer_views[buffer_view_index]
-                    start = buffer_view.get("byteOffset", 0)
-                    length = buffer_view.get("byteLength", 0)
-                    image_bytes = bin_chunk[start : start + length]
+        u = u % 1.0
+        v = v % 1.0
+        x = min(width - 1, max(0, int(u * (width - 1) + 0.5)))
+        y = min(height - 1, max(0, int((1.0 - v) * (height - 1) + 0.5)))
+        return texture.getpixel((x, y))
 
-            if image_bytes:
-                return image_bytes
-
-        return None
+    def _mix_color(self, color, factor):
+        red, green, blue, alpha = color
+        return (
+            max(0, min(255, int(red * factor))),
+            max(0, min(255, int(green * factor))),
+            max(0, min(255, int(blue * factor))),
+            alpha,
+        )
 
     def create_preview_image(self, skin_path, output_path):
-        """Crée une image d'aperçu à partir de la vraie texture du VRM."""
-        image_bytes = self._extract_image_bytes_from_vrm(skin_path)
-        if image_bytes is None:
-            img = Image.new("RGB", (400, 600), color="white")
+        """Crée une image d'aperçu assemblée à partir du mesh VRM."""
+        gltf, bin_chunk = self._load_glb(skin_path)
+        if not gltf or not bin_chunk:
+            img = Image.new("RGB", (900, 1200), color="white")
             img.save(output_path)
             return
 
-        try:
-            preview = Image.open(io.BytesIO(image_bytes))
-            preview = preview.convert("RGBA")
-        except Exception:
-            img = Image.new("RGB", (400, 600), color="white")
+        nodes = gltf.get("nodes", [])
+        if not nodes:
+            img = Image.new("RGB", (900, 1200), color="white")
             img.save(output_path)
             return
 
-        canvas = Image.new("RGBA", (900, 1200), (255, 255, 255, 255))
-        max_size = (840, 1140)
-        preview.thumbnail(max_size, Image.LANCZOS)
-        x = (canvas.width - preview.width) // 2
-        y = (canvas.height - preview.height) // 2
-        canvas.paste(preview, (x, y), preview)
+        world_matrices = [None] * len(nodes)
+
+        def walk(node_index, parent_matrix):
+            node = nodes[node_index]
+            local_matrix = self._node_local_matrix(node)
+            world_matrix = self._matrix_multiply(parent_matrix, local_matrix)
+            world_matrices[node_index] = world_matrix
+            for child_index in node.get("children", []):
+                walk(child_index, world_matrix)
+
+        scene_index = gltf.get("scene", 0)
+        scenes = gltf.get("scenes", [])
+        root_nodes = scenes[scene_index].get("nodes", []) if scene_index < len(scenes) else []
+        for root_index in root_nodes:
+            walk(root_index, self._identity_matrix())
+
+        rotation_y = math.radians(162.0)
+        rotation_x = math.radians(8.0)
+        cos_y = math.cos(rotation_y)
+        sin_y = math.sin(rotation_y)
+        cos_x = math.cos(rotation_x)
+        sin_x = math.sin(rotation_x)
+
+        def view_transform(point):
+            x, y, z = point
+            x2 = x * cos_y + z * sin_y
+            z2 = -x * sin_y + z * cos_y
+            y2 = y * cos_x - z2 * sin_x
+            z3 = y * sin_x + z2 * cos_x
+            return x2, y2, z3
+
+        render_triangles = []
+        all_points = []
+        materials = gltf.get("materials", [])
+
+        for node_index, node in enumerate(nodes):
+            mesh_index = node.get("mesh")
+            if mesh_index is None or mesh_index >= len(gltf.get("meshes", [])):
+                continue
+
+            world_matrix = world_matrices[node_index]
+            if world_matrix is None:
+                continue
+
+            mesh = gltf["meshes"][mesh_index]
+            for primitive in mesh.get("primitives", []):
+                position_accessor = primitive.get("attributes", {}).get("POSITION")
+                if position_accessor is None:
+                    continue
+
+                positions = self._read_accessor(gltf, bin_chunk, position_accessor)
+                if not positions:
+                    continue
+
+                texcoord_accessor = primitive.get("attributes", {}).get("TEXCOORD_0")
+                texcoords = self._read_accessor(gltf, bin_chunk, texcoord_accessor) if texcoord_accessor is not None else []
+
+                indices_accessor = primitive.get("indices")
+                if indices_accessor is not None:
+                    indices = self._read_accessor(gltf, bin_chunk, indices_accessor)
+                    if not indices:
+                        continue
+                else:
+                    indices = list(range(len(positions)))
+
+                material_index = primitive.get("material")
+                texture = None
+                base_color = (210, 210, 210, 255)
+                if material_index is not None and material_index < len(materials):
+                    material = materials[material_index]
+                    base_color_factor = material.get("pbrMetallicRoughness", {}).get("baseColorFactor")
+                    if base_color_factor and len(base_color_factor) >= 3:
+                        red = int(max(0.0, min(1.0, base_color_factor[0])) * 255)
+                        green = int(max(0.0, min(1.0, base_color_factor[1])) * 255)
+                        blue = int(max(0.0, min(1.0, base_color_factor[2])) * 255)
+                        alpha = int(max(0.0, min(1.0, base_color_factor[3] if len(base_color_factor) > 3 else 1.0)) * 255)
+                        base_color = (red, green, blue, alpha)
+
+                    texture_info = material.get("pbrMetallicRoughness", {}).get("baseColorTexture", {})
+                    texture = self._load_texture(gltf, bin_chunk, texture_info.get("index"))
+
+                for tri_start in range(0, len(indices) - 2, 3):
+                    vertex_indices = indices[tri_start : tri_start + 3]
+                    if len(vertex_indices) < 3:
+                        continue
+
+                    transformed = []
+                    projected = []
+                    triangle_depths = []
+                    uvs = []
+
+                    for vertex_index in vertex_indices:
+                        if vertex_index >= len(positions):
+                            break
+
+                        position = positions[vertex_index]
+                        world_point = self._matrix_vector(
+                            world_matrix, (position[0], position[1], position[2], 1.0)
+                        )
+                        view_point = view_transform((world_point[0], world_point[1], world_point[2]))
+                        transformed.append(view_point)
+                        projected.append((view_point[0], view_point[1]))
+                        triangle_depths.append(view_point[2])
+                        all_points.append((view_point[0], view_point[1]))
+
+                        if texcoords and vertex_index < len(texcoords):
+                            uv = texcoords[vertex_index]
+                            if len(uv) >= 2:
+                                uvs.append((uv[0], uv[1]))
+
+                    if len(transformed) != 3:
+                        continue
+
+                    normal_x = (transformed[1][1] - transformed[0][1]) * (transformed[2][2] - transformed[0][2]) - (
+                        transformed[1][2] - transformed[0][2]
+                    ) * (transformed[2][1] - transformed[0][1])
+                    normal_y = (transformed[1][2] - transformed[0][2]) * (transformed[2][0] - transformed[0][0]) - (
+                        transformed[1][0] - transformed[0][0]
+                    ) * (transformed[2][2] - transformed[0][2])
+                    normal_z = (transformed[1][0] - transformed[0][0]) * (transformed[2][1] - transformed[0][1]) - (
+                        transformed[1][1] - transformed[0][1]
+                    ) * (transformed[2][0] - transformed[0][0])
+                    normal_length = math.sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z) or 1.0
+                    normal_z /= normal_length
+
+                    light_factor = 0.58 + max(-0.18, min(0.35, normal_z * 0.28))
+                    if uvs:
+                        centroid_u = sum(uv[0] for uv in uvs) / len(uvs)
+                        centroid_v = sum(uv[1] for uv in uvs) / len(uvs)
+                        sampled = self._sample_texture(texture, centroid_u, centroid_v)
+                        color = self._mix_color(sampled, light_factor)
+                    else:
+                        color = self._mix_color(base_color, light_factor)
+
+                    depth = sum(triangle_depths) / 3.0
+                    render_triangles.append((depth, projected, color))
+
+        canvas = Image.new("RGBA", (900, 1200), (248, 248, 248, 255))
+        draw = ImageDraw.Draw(canvas, "RGBA")
+
+        if not render_triangles or not all_points:
+            canvas.convert("RGB").save(output_path)
+            return
+
+        min_x = min(point[0] for point in all_points)
+        max_x = max(point[0] for point in all_points)
+        min_y = min(point[1] for point in all_points)
+        max_y = max(point[1] for point in all_points)
+
+        span_x = max(max_x - min_x, 1e-6)
+        span_y = max(max_y - min_y, 1e-6)
+        scale = min(760.0 / span_x, 980.0 / span_y)
+        center_x = (min_x + max_x) * 0.5
+        center_y = (min_y + max_y) * 0.5
+        offset_x = canvas.width * 0.5
+        offset_y = canvas.height * 0.55
+
+        shadow_box = [
+            offset_x - (span_x * scale) * 0.34,
+            offset_y + (span_y * scale) * 0.40,
+            offset_x + (span_x * scale) * 0.34,
+            offset_y + (span_y * scale) * 0.48,
+        ]
+        draw.ellipse(shadow_box, fill=(0, 0, 0, 26))
+
+        render_triangles.sort(key=lambda item: item[0])
+        for _, projected, color in render_triangles:
+            points = [
+                (
+                    offset_x + (point[0] - center_x) * scale,
+                    offset_y - (point[1] - center_y) * scale,
+                )
+                for point in projected
+            ]
+            draw.polygon(points, fill=color)
+
         canvas.convert("RGB").save(output_path)
     
     def generate_preview(self, skin_name):
