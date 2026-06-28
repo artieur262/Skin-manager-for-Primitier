@@ -35,7 +35,7 @@ def lister_skins() -> List[Path]:
     )
 
 
-def appliquer_skin(skin_path: Path) -> None:
+def appliquer_skin(skin_path: Path) -> Path:
     """Copie le skin choisi dans le dossier courant du script."""
     # Supprime les anciens fichiers .vrm présents dans le dossier courant
     for f in BASE_DIR.iterdir():
@@ -54,9 +54,7 @@ def appliquer_skin(skin_path: Path) -> None:
 
     destination = BASE_DIR / skin_path.name
     shutil.copy2(skin_path, destination)
-    messagebox.showinfo(
-        "Skin appliqué", f"{skin_path.name} a été copié dans:\n{destination}"
-    )
+    return destination
 
 
 def afficher_apercu_skin(skin_path: Path) -> bool:
@@ -140,8 +138,8 @@ class Application(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Gestionnaire de skins VRM")
-        self.geometry("820x420")
-        self.minsize(700, 340)
+        self.geometry("960x540")
+        self.minsize(860, 480)
         self.preview_image = None
 
         self.label_info = tk.Label(
@@ -200,6 +198,16 @@ class Application(tk.Tk):
             boutons, text="Appliquer le skin", command=self.on_appliquer
         )
         self.btn_appliquer.pack(side="right")
+
+        self.status_message = tk.StringVar(value="")
+        self.status_label = tk.Label(
+            self,
+            textvariable=self.status_message,
+            anchor="w",
+            justify="left",
+            fg="#1b5e20",
+        )
+        self.status_label.pack(fill="x", padx=10, pady=(0, 10))
 
         self.rafraichir()
         self.afficher_etat_vide()
@@ -288,8 +296,10 @@ class Application(tk.Tk):
             return
 
         try:
-            appliquer_skin(skin_path)
-            
+            destination = appliquer_skin(skin_path)
+            self.status_message.set(
+                f"Skin appliqué : {skin_path.name} a été copié dans {destination}"
+            )
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible d'appliquer le skin :\n{exc}")
 
