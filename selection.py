@@ -287,11 +287,9 @@ class Application(tk.Tk):
             self.rafraichir()
             return
 
-        if not afficher_apercu_skin(skin_path):
-            return
-
         try:
             appliquer_skin(skin_path)
+            
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible d'appliquer le skin :\n{exc}")
 
