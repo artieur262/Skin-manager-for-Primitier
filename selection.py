@@ -13,7 +13,7 @@ import shutil
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
-from typing import List
+from typing import List, Optional
 
 from PIL import Image, ImageTk
 
@@ -156,6 +156,15 @@ class Application(tk.Tk):
         liste_frame = tk.Frame(contenu)
         liste_frame.pack(side="left", fill="both", expand=True)
 
+        self.current_applied_label = tk.Label(
+            liste_frame,
+            text="Skin actuellement appliqué : aucun",
+            anchor="w",
+            justify="left",
+            fg="#1b5e20",
+        )
+        self.current_applied_label.pack(fill="x", pady=(0, 6))
+
         self.listbox = tk.Listbox(liste_frame, activestyle="dotbox")
         self.listbox.pack(fill="both", expand=True)
         self.listbox.bind("<<ListboxSelect>>", self.on_skin_selected)
@@ -218,6 +227,29 @@ class Application(tk.Tk):
         self.preview_image_label.config(image="", text="Aucune image", fg="gray")
         self.preview_taille.config(text="")
 
+    def skin_applique_actuel(self) -> Optional[Path]:
+        for skin in lister_skins():
+            if (BASE_DIR / skin.name).exists():
+                return skin
+        return None
+
+    def nom_skin_affiche(self, skin: Path, skin_applique: Optional[Path]) -> str:
+        if skin_applique is not None and skin.name == skin_applique.name:
+            return f"✓ {skin.name}"
+        return f"  {skin.name}"
+
+    def nom_skin_reel(self, nom_affiche: str) -> str:
+        return nom_affiche.lstrip(" ✓")
+
+    def mettre_en_evidence_skin_applique(self) -> None:
+        skin_applique = self.skin_applique_actuel()
+        if skin_applique is None:
+            self.current_applied_label.config(text="Skin actuellement appliqué : aucun")
+        else:
+            self.current_applied_label.config(
+                text=f"Skin actuellement appliqué : {skin_applique.name}"
+            )
+
     def afficher_preview(self, skin_path: Path) -> None:
         taille = skin_path.stat().st_size
         taille_ko = taille / 1024 if taille else 0
@@ -249,6 +281,7 @@ class Application(tk.Tk):
     def rafraichir(self) -> None:
         self.listbox.delete(0, tk.END)
         skins = lister_skins()
+        skin_applique = self.skin_applique_actuel()
 
         if not skins:
             self.listbox.insert(
@@ -256,15 +289,27 @@ class Application(tk.Tk):
             )
             self.listbox.config(state="disabled")
             self.btn_appliquer.config(state="disabled")
+            self.mettre_en_evidence_skin_applique()
+            self.afficher_etat_vide()
             return
 
         self.listbox.config(state="normal")
         self.btn_appliquer.config(state="normal")
         for skin in skins:
-            self.listbox.insert(tk.END, skin.name)
+            self.listbox.insert(tk.END, self.nom_skin_affiche(skin, skin_applique))
+
+        self.mettre_en_evidence_skin_applique()
 
         self.listbox.selection_clear(0, tk.END)
-        self.afficher_etat_vide()
+        if skin_applique is not None:
+            for index, skin in enumerate(skins):
+                if skin.name == skin_applique.name:
+                    self.listbox.selection_set(index)
+                    self.listbox.see(index)
+                    self.afficher_preview(skin)
+                    break
+        else:
+            self.afficher_etat_vide()
 
     def on_skin_selected(self, event: tk.Event) -> None:
         selection = self.listbox.curselection()
@@ -272,7 +317,7 @@ class Application(tk.Tk):
             self.afficher_etat_vide()
             return
 
-        nom = self.listbox.get(selection[0])
+        nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
             self.afficher_etat_vide()
@@ -288,7 +333,7 @@ class Application(tk.Tk):
             )
             return
 
-        nom = self.listbox.get(selection[0])
+        nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
             messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
@@ -300,6 +345,7 @@ class Application(tk.Tk):
             self.status_message.set(
                 f"Skin appliqué : {skin_path.name} a été copié dans {destination}"
             )
+            self.rafraichir()
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible d'appliquer le skin :\n{exc}")
 
