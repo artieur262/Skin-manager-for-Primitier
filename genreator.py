@@ -14,7 +14,7 @@ import os
 import struct
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 
 
 class AvatarPreviewGenerator:
@@ -246,6 +246,43 @@ class AvatarPreviewGenerator:
         self._texture_cache[cache_key] = texture
         return texture
 
+    def _load_image_by_index(self, gltf, bin_chunk, image_index):
+        images = gltf.get("images", [])
+        if image_index is None or image_index >= len(images):
+            return None
+
+        cache_key = (id(bin_chunk), image_index, "image")
+        cached = self._texture_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        image_info = images[image_index]
+        image_bytes = None
+        uri = image_info.get("uri")
+        if uri:
+            if uri.startswith("data:") and "," in uri:
+                _, encoded = uri.split(",", 1)
+                image_bytes = base64.b64decode(encoded)
+
+        if image_bytes is None:
+            buffer_view_index = image_info.get("bufferView")
+            if buffer_view_index is not None and buffer_view_index < len(gltf.get("bufferViews", [])):
+                buffer_view = gltf["bufferViews"][buffer_view_index]
+                start = buffer_view.get("byteOffset", 0)
+                length = buffer_view.get("byteLength", 0)
+                image_bytes = bin_chunk[start : start + length]
+
+        if image_bytes is None:
+            return None
+
+        try:
+            image = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        except Exception:
+            return None
+
+        self._texture_cache[cache_key] = image
+        return image
+
     def _sample_texture(self, texture, u, v):
         if texture is None:
             return (208, 208, 208, 255)
@@ -269,6 +306,87 @@ class AvatarPreviewGenerator:
             alpha,
         )
 
+    def _solve_3x3(self, matrix, values):
+        augmented = [row[:] + [value] for row, value in zip(matrix, values)]
+
+        for column in range(3):
+            pivot_row = max(range(column, 3), key=lambda row: abs(augmented[row][column]))
+            if abs(augmented[pivot_row][column]) < 1e-12:
+                return None
+            if pivot_row != column:
+                augmented[column], augmented[pivot_row] = augmented[pivot_row], augmented[column]
+
+            pivot = augmented[column][column]
+            for index in range(column, 4):
+                augmented[column][index] /= pivot
+
+            for row in range(3):
+                if row == column:
+                    continue
+                factor = augmented[row][column]
+                for index in range(column, 4):
+                    augmented[row][index] -= factor * augmented[column][index]
+
+        return augmented[0][3], augmented[1][3], augmented[2][3]
+
+    def _affine_coefficients(self, destination_points, source_points):
+        matrix = [
+            [destination_points[0][0], destination_points[0][1], 1.0],
+            [destination_points[1][0], destination_points[1][1], 1.0],
+            [destination_points[2][0], destination_points[2][1], 1.0],
+        ]
+        source_x = [source_points[0][0], source_points[1][0], source_points[2][0]]
+        source_y = [source_points[0][1], source_points[1][1], source_points[2][1]]
+        coeff_x = self._solve_3x3(matrix, source_x)
+        coeff_y = self._solve_3x3(matrix, source_y)
+        if coeff_x is None or coeff_y is None:
+            return None
+        return coeff_x[0], coeff_x[1], coeff_x[2], coeff_y[0], coeff_y[1], coeff_y[2]
+
+    def _warp_texture_triangle(self, canvas, texture, destination_points, uv_points, mask_alpha=None):
+        min_x = max(0, int(math.floor(min(point[0] for point in destination_points))))
+        max_x = min(canvas.width, int(math.ceil(max(point[0] for point in destination_points))))
+        min_y = max(0, int(math.floor(min(point[1] for point in destination_points))))
+        max_y = min(canvas.height, int(math.ceil(max(point[1] for point in destination_points))))
+
+        if max_x <= min_x or max_y <= min_y:
+            return
+
+        local_destination_points = [
+            (point[0] - min_x, point[1] - min_y) for point in destination_points
+        ]
+        texture_width, texture_height = texture.size
+        source_points = [
+            (
+                uv[0] * (texture_width - 1),
+                (1.0 - uv[1]) * (texture_height - 1),
+            )
+            for uv in uv_points
+        ]
+
+        coefficients = self._affine_coefficients(local_destination_points, source_points)
+        if coefficients is None:
+            return
+
+        patch_width = max_x - min_x
+        patch_height = max_y - min_y
+        warped = texture.transform(
+            (patch_width, patch_height),
+            Image.AFFINE,
+            coefficients,
+            resample=Image.BILINEAR,
+        ).convert("RGBA")
+
+        triangle_mask = Image.new("L", (patch_width, patch_height), 0)
+        ImageDraw.Draw(triangle_mask).polygon(local_destination_points, fill=255)
+
+        if mask_alpha is not None:
+            triangle_mask = ImageChops.multiply(triangle_mask, mask_alpha)
+
+        alpha = warped.getchannel("A")
+        warped.putalpha(ImageChops.multiply(alpha, triangle_mask))
+        canvas.alpha_composite(warped, (min_x, min_y))
+
     def create_preview_image(self, skin_path, output_path):
         """Crée une image d'aperçu assemblée à partir du mesh VRM."""
         gltf, bin_chunk = self._load_glb(skin_path)
@@ -276,6 +394,22 @@ class AvatarPreviewGenerator:
             img = Image.new("RGB", (900, 1200), color="white")
             img.save(output_path)
             return
+
+        vrm_extension = gltf.get("extensions", {}).get("VRM", {})
+        meta = vrm_extension.get("meta", {}) if isinstance(vrm_extension, dict) else {}
+        thumbnail_index = meta.get("texture") if isinstance(meta, dict) else None
+        if isinstance(thumbnail_index, int):
+            thumbnail = self._load_image_by_index(gltf, bin_chunk, thumbnail_index)
+            if thumbnail is not None:
+                canvas = Image.new("RGBA", (900, 1200), (248, 248, 248, 255))
+                max_size = (780, 1080)
+                thumbnail = thumbnail.copy()
+                thumbnail.thumbnail(max_size, Image.LANCZOS)
+                x = (canvas.width - thumbnail.width) // 2
+                y = (canvas.height - thumbnail.height) // 2
+                canvas.paste(thumbnail, (x, y), thumbnail)
+                canvas.convert("RGB").save(output_path)
+                return
 
         nodes = gltf.get("nodes", [])
         if not nodes:
@@ -396,6 +530,9 @@ class AvatarPreviewGenerator:
                     if len(transformed) != 3:
                         continue
 
+                    if len(uvs) != 3:
+                        uvs = []
+
                     normal_x = (transformed[1][1] - transformed[0][1]) * (transformed[2][2] - transformed[0][2]) - (
                         transformed[1][2] - transformed[0][2]
                     ) * (transformed[2][1] - transformed[0][1])
@@ -409,7 +546,7 @@ class AvatarPreviewGenerator:
                     normal_z /= normal_length
 
                     light_factor = 0.58 + max(-0.18, min(0.35, normal_z * 0.28))
-                    if uvs:
+                    if uvs and texture is not None:
                         centroid_u = sum(uv[0] for uv in uvs) / len(uvs)
                         centroid_v = sum(uv[1] for uv in uvs) / len(uvs)
                         sampled = self._sample_texture(texture, centroid_u, centroid_v)
@@ -420,7 +557,8 @@ class AvatarPreviewGenerator:
                     depth = sum(triangle_depths) / 3.0
                     render_triangles.append((depth, projected, color))
 
-        canvas = Image.new("RGBA", (900, 1200), (248, 248, 248, 255))
+        render_scale = 2
+        canvas = Image.new("RGBA", (900 * render_scale, 1200 * render_scale), (248, 248, 248, 255))
         draw = ImageDraw.Draw(canvas, "RGBA")
 
         if not render_triangles or not all_points:
@@ -434,7 +572,7 @@ class AvatarPreviewGenerator:
 
         span_x = max(max_x - min_x, 1e-6)
         span_y = max(max_y - min_y, 1e-6)
-        scale = min(760.0 / span_x, 980.0 / span_y)
+        scale = min((760.0 * render_scale) / span_x, (980.0 * render_scale) / span_y)
         center_x = (min_x + max_x) * 0.5
         center_y = (min_y + max_y) * 0.5
         offset_x = canvas.width * 0.5
@@ -459,7 +597,8 @@ class AvatarPreviewGenerator:
             ]
             draw.polygon(points, fill=color)
 
-        canvas.convert("RGB").save(output_path)
+        final_image = canvas.resize((900, 1200), Image.LANCZOS)
+        final_image.convert("RGB").save(output_path)
     
     def generate_preview(self, skin_name):
         """Génère une preview pour un skin spécifique"""
