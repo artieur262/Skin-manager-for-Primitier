@@ -9,19 +9,23 @@ l'apperçu doit avoir le nom du skin, une image du skin et la taille du fichier
 
 """
 
-from __future__ import annotations
-
 import shutil
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
+from typing import List
+
+from PIL import Image, ImageTk
+
+from genreator import AvatarPreviewGenerator
 
 BASE_DIR = Path(__file__).resolve().parent
 SKINS_DIR = BASE_DIR / "skins"
 APERCU_DIR = BASE_DIR / "apercus"
+PREVIEW_GENERATOR = AvatarPreviewGenerator(SKINS_DIR, APERCU_DIR)
 
 
-def lister_skins() -> list[Path]:
+def lister_skins() -> List[Path]:
     """Retourne la liste des fichiers .vrm disponibles."""
     if not SKINS_DIR.exists():
         return []
@@ -59,12 +63,9 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
     """Affiche un aperçu simple du skin et demande confirmation."""
     taille = skin_path.stat().st_size
     taille_ko = taille / 1024 if taille else 0
-    image_path = None
-    for ext in (".png", ".gif", ".ppm", ".pgm"):
-        candidate = skin_path.with_suffix(ext)
-        if candidate.exists():
-            image_path = candidate
-            break
+    preview_path = APERCU_DIR / skin_path.with_suffix(".png").name
+    if not preview_path.exists():
+        PREVIEW_GENERATOR.generate_preview(skin_path.name)
 
     apercu = tk.Toplevel()
     apercu.title(f"Aperçu - {skin_path.name}")
@@ -85,9 +86,12 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
     zone_image = tk.Frame(cadre)
     zone_image.pack(fill="x", padx=12, pady=(12, 8))
 
-    if image_path is not None:
+    if preview_path.exists():
         try:
-            image = tk.PhotoImage(file=str(image_path))
+            with Image.open(preview_path) as source:
+                preview_image = source.copy()
+            preview_image.thumbnail((360, 180), Image.LANCZOS)
+            image = ImageTk.PhotoImage(preview_image)
             label_image = tk.Label(zone_image, image=image)
             label_image.image = image
             label_image.pack()
@@ -100,7 +104,7 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
     else:
         tk.Label(
             zone_image,
-            text="Aucune image associée trouvée (.png, .gif, .ppm, .pgm)",
+            text="Aucune image d'aperçu n'a pu être générée",
             fg="gray",
         ).pack()
 
