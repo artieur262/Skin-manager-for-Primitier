@@ -6,6 +6,7 @@ quand un skin est choisi, le programme va le déplacer dans le dossier courant e
 la liste des skins disponibles est stockée dans un dossier "skins" et le programme va lire ce dossier pour afficher les skins disponibles
 quand on selection un skin on doit avoir un apercu du skin avant de l'appliquer
 l'apperçu doit avoir le nom du skin, une image du skin et la taille du fichier
+
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from tkinter import messagebox
 
 BASE_DIR = Path(__file__).resolve().parent
 SKINS_DIR = BASE_DIR / "skins"
+APERCU_DIR = BASE_DIR / "apercus"
 
 
 def lister_skins() -> list[Path]:
