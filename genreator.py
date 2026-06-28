@@ -1,5 +1,5 @@
 """
-Ce programme a pour but de géner les images de preview pour les skins VRM. 
+Ce programme a pour but de générer les images de preview pour les skins .vrm. 
 La liste des skins disponibles est stockée dans un dossier "skins" 
 et le programme va lire ce dossier pour afficher les skins disponibles. 
 Quand on sélectionne un skin, on doit avoir un aperçu du skin avant de l'appliquer. 
