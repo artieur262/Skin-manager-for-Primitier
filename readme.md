@@ -10,6 +10,12 @@ Ce projet fournit une petite interface graphique pour choisir un skin au format 
 - Quand tu appliques un skin, le fichier `.vrm` choisi est copié à la racine du projet.
 - Avant la copie, les autres fichiers `.vrm` présents à la racine sont supprimés.
 
+## Ce que font les programmes
+
+- `selection.py` est le programme principal. Il affiche l’interface graphique, liste les skins disponibles, montre l’aperçu du skin sélectionné et applique le skin choisi.
+- `genreator.py` génère les images d’aperçu utilisées par l’interface. Il lit le fichier `.vrm` et crée une image stockée dans `apercus/`.
+- Les deux scripts travaillent ensemble : `selection.py` appelle `genreator.py` quand un aperçu doit être créé ou mis à jour.
+
 ## Prérequis
 
 - Python 3
