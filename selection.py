@@ -140,8 +140,9 @@ class Application(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Gestionnaire de skins VRM")
-        self.geometry("520x360")
-        self.minsize(420, 280)
+        self.geometry("820x420")
+        self.minsize(700, 340)
+        self.preview_image = None
 
         self.label_info = tk.Label(
             self,
@@ -151,8 +152,41 @@ class Application(tk.Tk):
         )
         self.label_info.pack(fill="x", padx=10, pady=(10, 4))
 
-        self.listbox = tk.Listbox(self, activestyle="dotbox")
-        self.listbox.pack(fill="both", expand=True, padx=10, pady=6)
+        contenu = tk.Frame(self)
+        contenu.pack(fill="both", expand=True, padx=10, pady=6)
+
+        liste_frame = tk.Frame(contenu)
+        liste_frame.pack(side="left", fill="both", expand=True)
+
+        self.listbox = tk.Listbox(liste_frame, activestyle="dotbox")
+        self.listbox.pack(fill="both", expand=True)
+        self.listbox.bind("<<ListboxSelect>>", self.on_skin_selected)
+
+        preview_frame = tk.LabelFrame(contenu, text="Prévisualisation", padx=12, pady=12)
+        preview_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
+
+        self.preview_nom = tk.Label(
+            preview_frame,
+            text="Clique sur un skin pour voir l'aperçu.",
+            anchor="w",
+            justify="left",
+        )
+        self.preview_nom.pack(fill="x", pady=(0, 8))
+
+        self.preview_image_label = tk.Label(
+            preview_frame,
+            text="Aucune image",
+            fg="gray",
+        )
+        self.preview_image_label.pack(fill="both", expand=True)
+
+        self.preview_taille = tk.Label(
+            preview_frame,
+            text="",
+            anchor="w",
+            justify="left",
+        )
+        self.preview_taille.pack(fill="x", pady=(8, 0))
 
         boutons = tk.Frame(self)
         boutons.pack(fill="x", padx=10, pady=(0, 10))
@@ -168,6 +202,41 @@ class Application(tk.Tk):
         self.btn_appliquer.pack(side="right")
 
         self.rafraichir()
+        self.afficher_etat_vide()
+
+    def afficher_etat_vide(self) -> None:
+        self.preview_image = None
+        self.preview_nom.config(text="Clique sur un skin pour voir l'aperçu.")
+        self.preview_image_label.config(image="", text="Aucune image", fg="gray")
+        self.preview_taille.config(text="")
+
+    def afficher_preview(self, skin_path: Path) -> None:
+        taille = skin_path.stat().st_size
+        taille_ko = taille / 1024 if taille else 0
+        preview_path = APERCU_DIR / skin_path.with_suffix(".png").name
+        if not preview_path.exists():
+            PREVIEW_GENERATOR.generate_preview(skin_path.name)
+
+        self.preview_nom.config(text=f"Nom : {skin_path.name}")
+        self.preview_taille.config(text=f"Taille : {taille_ko:.1f} Ko")
+
+        if preview_path.exists():
+            try:
+                with Image.open(preview_path) as source:
+                    preview_image = source.copy()
+                preview_image.thumbnail((320, 220), Image.LANCZOS)
+                self.preview_image = ImageTk.PhotoImage(preview_image)
+                self.preview_image_label.config(image=self.preview_image, text="")
+                return
+            except Exception:
+                pass
+
+        self.preview_image = None
+        self.preview_image_label.config(
+            image="",
+            text="Image du skin indisponible",
+            fg="gray",
+        )
 
     def rafraichir(self) -> None:
         self.listbox.delete(0, tk.END)
@@ -185,6 +254,23 @@ class Application(tk.Tk):
         self.btn_appliquer.config(state="normal")
         for skin in skins:
             self.listbox.insert(tk.END, skin.name)
+
+        self.listbox.selection_clear(0, tk.END)
+        self.afficher_etat_vide()
+
+    def on_skin_selected(self, event: tk.Event) -> None:
+        selection = self.listbox.curselection()
+        if not selection:
+            self.afficher_etat_vide()
+            return
+
+        nom = self.listbox.get(selection[0])
+        skin_path = SKINS_DIR / nom
+        if not skin_path.exists():
+            self.afficher_etat_vide()
+            return
+
+        self.afficher_preview(skin_path)
 
     def on_appliquer(self) -> None:
         selection = self.listbox.curselection()
