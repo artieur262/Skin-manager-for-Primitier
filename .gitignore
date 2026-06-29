@@ -1,4 +1,5 @@
 skins/
 apercus/
 venv/
+__pycache__/
 *.vrm
