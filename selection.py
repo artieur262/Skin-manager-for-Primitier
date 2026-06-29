@@ -19,7 +19,7 @@ from typing import List, Optional
 
 from PIL import Image, ImageTk
 
-from cat.genreator import AvatarPreviewGenerator
+from genreator import AvatarPreviewGenerator
 
 BASE_DIR = Path(__file__).resolve().parent
 SKINS_DIR = BASE_DIR / "skins"
@@ -191,6 +191,9 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
 class Application(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
+        #ajout le dossier options s'il n'existe pas
+        OPTIONS_DIR.mkdir(exist_ok=True)
+
         self.__options: dict = recuperer_options()
         self.__favoris: set[str] = set(recuperer_liste_favoris())
         self.title("Gestionnaire de skins VRM")
@@ -228,6 +231,7 @@ class Application(tk.Tk):
         preview_frame = tk.LabelFrame(contenu, text="Prévisualisation", padx=12, pady=12)
         preview_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
 
+
         self.preview_nom = tk.Label(
             preview_frame,
             text="Clique sur un skin pour voir l'aperçu.",
@@ -235,6 +239,24 @@ class Application(tk.Tk):
             justify="left",
         )
         self.preview_nom.pack(fill="x", pady=(0, 8))
+        
+        self.boutons_degre = tk.Frame(preview_frame)
+        self.boutons_degre.pack(fill="x", pady=(2, 0))
+
+        self.label_degre = tk.Label(
+            self.boutons_degre, text="Rotation de l'aperçu :"
+        )
+        self.label_degre.pack(side="left", padx=(0, 8))
+
+        self.btn_degre_0 = tk.Button(
+            self.boutons_degre, text="0°", command=lambda: self.changer_degre(0)
+        )
+        self.btn_degre_0.pack(side="left")
+
+        self.btn_degre_180 = tk.Button(
+            self.boutons_degre, text="180°", command=lambda: self.changer_degre(180)
+        )
+        self.btn_degre_180.pack(side="left")
 
         self.preview_image_label = tk.Label(
             preview_frame,
@@ -459,9 +481,33 @@ class Application(tk.Tk):
             else:
                 self.add_favori(skin_path.name)
                 self.status_message.set(f"Skin ajouté aux favoris : {skin_path.name}")
-            self.rafraichir_gardant_selection()
+            self.rafraichir()
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible de changer le favori :\n{exc}")
+
+    
+    def changer_degre(self, degre: int) -> None:
+        selection = self.listbox.curselection()
+        if not selection:
+            messagebox.showwarning(
+                "Sélection manquante", "Choisis un skin dans la liste."
+            )
+            return
+
+        nom = self.nom_skin_reel(self.listbox.get(selection[0]))
+        skin_path = SKINS_DIR / nom
+        if not skin_path.exists():
+            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            self.rafraichir()
+            return
+
+        try:
+            PREVIEW_GENERATOR.generate_preview(skin_path.name, rotation=degre)
+            self.rafraichir()
+            self.status_message.set(f"Aperçu du skin {skin_path.name} mis à jour à {degre}°")
+        except Exception as exc:  # pragma: no cover - interface utilisateur
+            messagebox.showerror("Erreur", f"Impossible de changer l'apercu :\n{exc}")
+
 
 
 def main() -> None:

@@ -611,7 +611,7 @@ class AvatarPreviewGenerator:
         """Crée une image d'aperçu du VRM tournée à 180°."""
         self._render_preview_image(skin_path, output_path, rotation_degrees=180.0)
     
-    def generate_preview(self, skin_name):
+    def generate_preview(self, skin_name, rotation:int=0, rapide:bool=False):
         """Génère une preview pour un skin spécifique"""
         skin_path = self.skins_dir / skin_name
         
@@ -623,8 +623,12 @@ class AvatarPreviewGenerator:
         preview_name = skin_name.replace('.vrm', '.png')
         preview_path = self.preview_dir / preview_name
         
+        if rapide and preview_path.exists():
+            print(f"L'aperçu pour '{skin_name}' existe déjà. Passage au suivant.")
+            return True
+
         # Créer une image de preview à partir de la texture embarquée dans le VRM
-        self.create_preview_image(skin_path, preview_path)
+        self._render_preview_image(skin_path, preview_path, rotation_degrees=rotation)
         
         # Sauvegarder les métadonnées
         # metadata = {
@@ -640,7 +644,7 @@ class AvatarPreviewGenerator:
         print(f"Preview générée: {preview_path}")
         return True
     
-    def generate_all_previews(self):
+    def generate_all_previews(self, rapide:bool=True):
         """Génère les previews pour tous les skins"""
         skins = self.get_available_skins()
         if not skins:
@@ -648,7 +652,7 @@ class AvatarPreviewGenerator:
             return
         
         for skin in skins:
-            self.generate_preview(skin)
+            self.generate_preview(skin, rapide=rapide)
         
         print(f"Génération terminée: {len(skins)} preview(s) créée(s)")
 
