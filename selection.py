@@ -264,7 +264,7 @@ class Application(tk.Tk):
             text="activer la régénération forcée",
             command=self.toggle_force_preview_generation
         )
-        self.btn_force_preview.pack(side="left", padx=(8, 0))
+        self.btn_force_preview.pack(side="right", padx=(8, 0))
 
         self.preview_image_label = tk.Label(
             preview_frame,
@@ -311,6 +311,7 @@ class Application(tk.Tk):
 
         self.rafraichir()
         self.afficher_etat_vide()
+        self.rafraichir()
 
 
 

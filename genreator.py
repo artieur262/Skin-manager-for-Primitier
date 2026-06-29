@@ -317,7 +317,7 @@ class AvatarPreviewGenerator:
         vrm_extension = gltf.get("extensions", {}).get("VRM", {})
         meta = vrm_extension.get("meta", {}) if isinstance(vrm_extension, dict) else {}
         thumbnail_index = meta.get("texture") if isinstance(meta, dict) else None
-        if isinstance(thumbnail_index, int):
+        if not force and isinstance(thumbnail_index, int):
             thumbnail = self._load_image_by_index(gltf, bin_chunk, thumbnail_index)
             if thumbnail is not None:
                 canvas = Image.new("RGBA", (900, 1200), (248, 248, 248, 255))
