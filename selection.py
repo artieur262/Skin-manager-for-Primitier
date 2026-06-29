@@ -8,21 +8,73 @@ quand on clique sur un skin on doit avoir un aperçu du skin à coté de la list
 l'apperçu doit avoir le nom du skin, une image du skin et la taille du fichier
 
 """
-
+import os
 import shutil
+import json
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
 from typing import List, Optional
 
+
 from PIL import Image, ImageTk
 
-from genreator import AvatarPreviewGenerator
+from cat.genreator import AvatarPreviewGenerator
 
 BASE_DIR = Path(__file__).resolve().parent
 SKINS_DIR = BASE_DIR / "skins"
 APERCU_DIR = BASE_DIR / "apercus"
+OPTIONS_DIR = BASE_DIR / "options"
+
 PREVIEW_GENERATOR = AvatarPreviewGenerator(SKINS_DIR, APERCU_DIR)
+
+def recuperer_options() -> dict:
+    """Récupère les options depuis le fichier options.json."""
+    OPTIONS_DIR.mkdir(exist_ok=True)
+    options_file = OPTIONS_DIR / "options.json"
+    if not options_file.exists():
+        with open(options_file, "w", encoding="utf-8") as f:
+            json.dump({}, f, indent=4)
+        return {}
+    try:
+        with open(options_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+    
+def sauvegarder_options(options: dict) -> None:
+    """Sauvegarde les options dans le fichier options.json."""
+    OPTIONS_DIR.mkdir(exist_ok=True)
+    options_file = OPTIONS_DIR / "options.json"
+    try:
+        with open(options_file, "w", encoding="utf-8") as f:
+            json.dump(options, f, indent=4)
+    except Exception:
+        pass
+
+def recuperer_liste_favoris() -> List[str]:
+    """Récupère la liste des skins favoris depuis le fichier favoris.json."""
+    OPTIONS_DIR.mkdir(exist_ok=True)
+    favoris_file = OPTIONS_DIR / "favoris.json"
+    if not favoris_file.exists():
+        with open(favoris_file, "w", encoding="utf-8") as f:
+            json.dump([], f, indent=4)
+        return []
+    try:
+        with open(favoris_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def sauvegarder_liste_favoris(favoris: List[str]) -> None:
+    """Sauvegarde la liste des skins favoris dans le fichier favoris.json."""
+    OPTIONS_DIR.mkdir(exist_ok=True)
+    favoris_file = OPTIONS_DIR / "favoris.json"
+    try:
+        with open(favoris_file, "w", encoding="utf-8") as f:
+            json.dump(favoris, f, indent=4)
+    except Exception:
+        pass
 
 
 def lister_skins() -> List[Path]:
@@ -71,6 +123,8 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
     apercu.resizable(False, False)
     apercu.transient()
     apercu.grab_set()
+    
+
 
     tk.Label(
         apercu,
@@ -137,6 +191,8 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
 class Application(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
+        self.__options: dict = recuperer_options()
+        self.__favoris: set[str] = set(recuperer_liste_favoris())
         self.title("Gestionnaire de skins VRM")
         self.geometry("960x540")
         self.minsize(860, 480)
@@ -208,6 +264,11 @@ class Application(tk.Tk):
         )
         self.btn_appliquer.pack(side="right")
 
+        self.btn_favori = tk.Button(
+            preview_frame, text="Ajouter/Retirer des favoris", command=self.changer_le_favori
+        )
+        self.btn_favori.pack(fill="x", pady=(8, 0))
+
         self.status_message = tk.StringVar(value="")
         self.status_label = tk.Label(
             self,
@@ -220,6 +281,27 @@ class Application(tk.Tk):
 
         self.rafraichir()
         self.afficher_etat_vide()
+
+    def get_options(self) -> dict:
+        return self.__options
+    
+    def update_options(self, key: str, value) -> None:
+        self.__options[key] = value
+        sauvegarder_options(self.__options)
+    
+    def get_favoris(self) -> set:
+        return self.__favoris
+    
+    def add_favori(self, skin_name: str) -> None:
+        self.__favoris.add(skin_name)
+        sauvegarder_liste_favoris(list(self.__favoris))
+    
+    def remove_favori(self, skin_name: str) -> None:
+        self.__favoris.discard(skin_name)
+        sauvegarder_liste_favoris(list(self.__favoris))
+
+    def is_skin_favori(self, skin_name: str) -> bool:
+        return skin_name in self.__favoris
 
     def afficher_etat_vide(self) -> None:
         self.preview_image = None
@@ -234,12 +316,18 @@ class Application(tk.Tk):
         return None
 
     def nom_skin_affiche(self, skin: Path, skin_applique: Optional[Path]) -> str:
+        name = ("♥ " if self.is_skin_favori(skin.name) else "") + skin.name
         if skin_applique is not None and skin.name == skin_applique.name:
-            return f"✓ {skin.name}"
-        return f"  {skin.name}"
+            return f"✓ {name}"
+        return f"  {name}"
 
     def nom_skin_reel(self, nom_affiche: str) -> str:
-        return nom_affiche.lstrip(" ✓")
+        return nom_affiche.lstrip(" ✓").lstrip("♥ ")
+
+    def mettre_en_evidence_skin(self, skin_name: str) -> None:
+        """Met en évidence le skin appliqué dans la liste."""
+        pass
+        
 
     def mettre_en_evidence_skin_applique(self) -> None:
         skin_applique = self.skin_applique_actuel()
@@ -277,7 +365,7 @@ class Application(tk.Tk):
             text="Image du skin indisponible",
             fg="gray",
         )
-
+                
     def rafraichir(self) -> None:
         self.listbox.delete(0, tk.END)
         skins = lister_skins()
@@ -348,6 +436,32 @@ class Application(tk.Tk):
             self.rafraichir()
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible d'appliquer le skin :\n{exc}")
+    
+    def changer_le_favori(self) -> None:
+        selection = self.listbox.curselection()
+        if not selection:
+            messagebox.showwarning(
+                "Sélection manquante", "Choisis un skin dans la liste."
+            )
+            return
+
+        nom = self.nom_skin_reel(self.listbox.get(selection[0]))
+        skin_path = SKINS_DIR / nom
+        if not skin_path.exists():
+            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            self.rafraichir()
+            return
+
+        try:
+            if self.is_skin_favori(skin_path.name):
+                self.remove_favori(skin_path.name)
+                self.status_message.set(f"Skin retiré des favoris : {skin_path.name}")
+            else:
+                self.add_favori(skin_path.name)
+                self.status_message.set(f"Skin ajouté aux favoris : {skin_path.name}")
+            self.rafraichir_gardant_selection()
+        except Exception as exc:  # pragma: no cover - interface utilisateur
+            messagebox.showerror("Erreur", f"Impossible de changer le favori :\n{exc}")
 
 
 def main() -> None:
