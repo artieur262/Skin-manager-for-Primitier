@@ -196,6 +196,7 @@ class Application(tk.Tk):
 
         self.__options: dict = recuperer_options()
         self.__favoris: set[str] = set(recuperer_liste_favoris())
+        self.__force_preview_generation: bool = False
         self.title("Gestionnaire de skins VRM")
         self.geometry("960x540")
         self.minsize(860, 480)
@@ -258,6 +259,13 @@ class Application(tk.Tk):
         )
         self.btn_degre_180.pack(side="left")
 
+        self.btn_force_preview = tk.Button(
+            self.boutons_degre,
+            text="activer la régénération forcée",
+            command=self.toggle_force_preview_generation
+        )
+        self.btn_force_preview.pack(side="left", padx=(8, 0))
+
         self.preview_image_label = tk.Label(
             preview_frame,
             text="Aucune image",
@@ -304,6 +312,8 @@ class Application(tk.Tk):
         self.rafraichir()
         self.afficher_etat_vide()
 
+
+
     def get_options(self) -> dict:
         return self.__options
     
@@ -324,6 +334,25 @@ class Application(tk.Tk):
 
     def is_skin_favori(self, skin_name: str) -> bool:
         return skin_name in self.__favoris
+    
+    def get_force_preview_generation(self) -> bool:
+        return self.__force_preview_generation
+    
+    def set_force_preview_generation(self, value: bool) -> None:
+        self.__force_preview_generation = value
+        self.update_options("force_preview_generation", value)
+        self.actualiser_force_preview_button()
+    
+    def toggle_force_preview_generation(self) -> None:
+        self.__force_preview_generation = not self.__force_preview_generation
+        self.update_options("force_preview_generation", self.__force_preview_generation)
+        self.actualiser_force_preview_button()
+
+    def actualiser_force_preview_button(self) -> None:
+        if self.__force_preview_generation:
+            self.btn_force_preview.config(relief="sunken", text="désactiver la régénération forcée")
+        else:
+            self.btn_force_preview.config(relief="raised", text="activer la régénération forcée")
 
     def afficher_etat_vide(self) -> None:
         self.preview_image = None
@@ -502,7 +531,7 @@ class Application(tk.Tk):
             return
 
         try:
-            PREVIEW_GENERATOR.generate_preview(skin_path.name, rotation=degre)
+            PREVIEW_GENERATOR.generate_preview(skin_path.name, rotation=degre, force=self.__force_preview_generation)
             self.rafraichir()
             self.status_message.set(f"Aperçu du skin {skin_path.name} mis à jour à {degre}°")
         except Exception as exc:  # pragma: no cover - interface utilisateur

@@ -306,7 +306,7 @@ class AvatarPreviewGenerator:
             alpha,
         )
 
-    def _render_preview_image(self, skin_path, output_path, rotation_degrees=0.0):
+    def _render_preview_image(self, skin_path, output_path, rotation_degrees=0.0, force=False):
         """Rend un aperçu du VRM avec une rotation autour de l'axe vertical."""
         gltf, bin_chunk = self._load_glb(skin_path)
         if not gltf or not bin_chunk:
@@ -611,7 +611,7 @@ class AvatarPreviewGenerator:
         """Crée une image d'aperçu du VRM tournée à 180°."""
         self._render_preview_image(skin_path, output_path, rotation_degrees=180.0)
     
-    def generate_preview(self, skin_name, rotation:int=0, rapide:bool=False):
+    def generate_preview(self, skin_name, rotation:int=0, rapide:bool=False, force:bool=False):
         """Génère une preview pour un skin spécifique"""
         skin_path = self.skins_dir / skin_name
         
@@ -619,16 +619,21 @@ class AvatarPreviewGenerator:
             print(f"Erreur: Le skin '{skin_name}' n'existe pas")
             return False
         
-        file_size = self.get_file_size(skin_path)
+        # file_size = self.get_file_size(skin_path)
         preview_name = skin_name.replace('.vrm', '.png')
         preview_path = self.preview_dir / preview_name
         
-        if rapide and preview_path.exists():
-            print(f"L'aperçu pour '{skin_name}' existe déjà. Passage au suivant.")
-            return True
+        if preview_path.exists():
+            if rapide:
+                print(f"L'aperçu pour '{skin_name}' existe déjà. Passage au suivant.")
+                return True
+            else:
+                 # Supprimer l'aperçu existant pour le régénérer
+                os.remove(preview_path)
+                print(f"Régénération de l'aperçu pour {skin_name}")
 
         # Créer une image de preview à partir de la texture embarquée dans le VRM
-        self._render_preview_image(skin_path, preview_path, rotation_degrees=rotation)
+        self._render_preview_image(skin_path, preview_path, rotation_degrees=rotation, force=force)
         
         # Sauvegarder les métadonnées
         # metadata = {
