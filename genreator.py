@@ -306,89 +306,8 @@ class AvatarPreviewGenerator:
             alpha,
         )
 
-    def _solve_3x3(self, matrix, values):
-        augmented = [row[:] + [value] for row, value in zip(matrix, values)]
-
-        for column in range(3):
-            pivot_row = max(range(column, 3), key=lambda row: abs(augmented[row][column]))
-            if abs(augmented[pivot_row][column]) < 1e-12:
-                return None
-            if pivot_row != column:
-                augmented[column], augmented[pivot_row] = augmented[pivot_row], augmented[column]
-
-            pivot = augmented[column][column]
-            for index in range(column, 4):
-                augmented[column][index] /= pivot
-
-            for row in range(3):
-                if row == column:
-                    continue
-                factor = augmented[row][column]
-                for index in range(column, 4):
-                    augmented[row][index] -= factor * augmented[column][index]
-
-        return augmented[0][3], augmented[1][3], augmented[2][3]
-
-    def _affine_coefficients(self, destination_points, source_points):
-        matrix = [
-            [destination_points[0][0], destination_points[0][1], 1.0],
-            [destination_points[1][0], destination_points[1][1], 1.0],
-            [destination_points[2][0], destination_points[2][1], 1.0],
-        ]
-        source_x = [source_points[0][0], source_points[1][0], source_points[2][0]]
-        source_y = [source_points[0][1], source_points[1][1], source_points[2][1]]
-        coeff_x = self._solve_3x3(matrix, source_x)
-        coeff_y = self._solve_3x3(matrix, source_y)
-        if coeff_x is None or coeff_y is None:
-            return None
-        return coeff_x[0], coeff_x[1], coeff_x[2], coeff_y[0], coeff_y[1], coeff_y[2]
-
-    def _warp_texture_triangle(self, canvas, texture, destination_points, uv_points, mask_alpha=None):
-        min_x = max(0, int(math.floor(min(point[0] for point in destination_points))))
-        max_x = min(canvas.width, int(math.ceil(max(point[0] for point in destination_points))))
-        min_y = max(0, int(math.floor(min(point[1] for point in destination_points))))
-        max_y = min(canvas.height, int(math.ceil(max(point[1] for point in destination_points))))
-
-        if max_x <= min_x or max_y <= min_y:
-            return
-
-        local_destination_points = [
-            (point[0] - min_x, point[1] - min_y) for point in destination_points
-        ]
-        texture_width, texture_height = texture.size
-        source_points = [
-            (
-                uv[0] * (texture_width - 1),
-                (1.0 - uv[1]) * (texture_height - 1),
-            )
-            for uv in uv_points
-        ]
-
-        coefficients = self._affine_coefficients(local_destination_points, source_points)
-        if coefficients is None:
-            return
-
-        patch_width = max_x - min_x
-        patch_height = max_y - min_y
-        warped = texture.transform(
-            (patch_width, patch_height),
-            Image.AFFINE,
-            coefficients,
-            resample=Image.BILINEAR,
-        ).convert("RGBA")
-
-        triangle_mask = Image.new("L", (patch_width, patch_height), 0)
-        ImageDraw.Draw(triangle_mask).polygon(local_destination_points, fill=255)
-
-        if mask_alpha is not None:
-            triangle_mask = ImageChops.multiply(triangle_mask, mask_alpha)
-
-        alpha = warped.getchannel("A")
-        warped.putalpha(ImageChops.multiply(alpha, triangle_mask))
-        canvas.alpha_composite(warped, (min_x, min_y))
-
-    def create_preview_image(self, skin_path, output_path):
-        """Crée une image d'aperçu assemblée à partir du mesh VRM."""
+    def _render_preview_image(self, skin_path, output_path, rotation_degrees=0.0, force=False):
+        """Rend un aperçu du VRM avec une rotation autour de l'axe vertical."""
         gltf, bin_chunk = self._load_glb(skin_path)
         if not gltf or not bin_chunk:
             img = Image.new("RGB", (900, 1200), color="white")
@@ -398,7 +317,7 @@ class AvatarPreviewGenerator:
         vrm_extension = gltf.get("extensions", {}).get("VRM", {})
         meta = vrm_extension.get("meta", {}) if isinstance(vrm_extension, dict) else {}
         thumbnail_index = meta.get("texture") if isinstance(meta, dict) else None
-        if isinstance(thumbnail_index, int):
+        if not force and isinstance(thumbnail_index, int):
             thumbnail = self._load_image_by_index(gltf, bin_chunk, thumbnail_index)
             if thumbnail is not None:
                 canvas = Image.new("RGBA", (900, 1200), (248, 248, 248, 255))
@@ -433,7 +352,7 @@ class AvatarPreviewGenerator:
         for root_index in root_nodes:
             walk(root_index, self._identity_matrix())
 
-        rotation_y = math.radians(162.0)
+        rotation_y = math.radians(rotation_degrees)
         rotation_x = math.radians(8.0)
         cos_y = math.cos(rotation_y)
         sin_y = math.sin(rotation_y)
@@ -599,8 +518,100 @@ class AvatarPreviewGenerator:
 
         final_image = canvas.resize((900, 1200), Image.LANCZOS)
         final_image.convert("RGB").save(output_path)
+
+    def _solve_3x3(self, matrix, values):
+        augmented = [row[:] + [value] for row, value in zip(matrix, values)]
+
+        for column in range(3):
+            pivot_row = max(range(column, 3), key=lambda row: abs(augmented[row][column]))
+            if abs(augmented[pivot_row][column]) < 1e-12:
+                return None
+            if pivot_row != column:
+                augmented[column], augmented[pivot_row] = augmented[pivot_row], augmented[column]
+
+            pivot = augmented[column][column]
+            for index in range(column, 4):
+                augmented[column][index] /= pivot
+
+            for row in range(3):
+                if row == column:
+                    continue
+                factor = augmented[row][column]
+                for index in range(column, 4):
+                    augmented[row][index] -= factor * augmented[column][index]
+
+        return augmented[0][3], augmented[1][3], augmented[2][3]
+
+    def _affine_coefficients(self, destination_points, source_points):
+        matrix = [
+            [destination_points[0][0], destination_points[0][1], 1.0],
+            [destination_points[1][0], destination_points[1][1], 1.0],
+            [destination_points[2][0], destination_points[2][1], 1.0],
+        ]
+        source_x = [source_points[0][0], source_points[1][0], source_points[2][0]]
+        source_y = [source_points[0][1], source_points[1][1], source_points[2][1]]
+        coeff_x = self._solve_3x3(matrix, source_x)
+        coeff_y = self._solve_3x3(matrix, source_y)
+        if coeff_x is None or coeff_y is None:
+            return None
+        return coeff_x[0], coeff_x[1], coeff_x[2], coeff_y[0], coeff_y[1], coeff_y[2]
+
+    def _warp_texture_triangle(self, canvas, texture, destination_points, uv_points, mask_alpha=None):
+        min_x = max(0, int(math.floor(min(point[0] for point in destination_points))))
+        max_x = min(canvas.width, int(math.ceil(max(point[0] for point in destination_points))))
+        min_y = max(0, int(math.floor(min(point[1] for point in destination_points))))
+        max_y = min(canvas.height, int(math.ceil(max(point[1] for point in destination_points))))
+
+        if max_x <= min_x or max_y <= min_y:
+            return
+
+        local_destination_points = [
+            (point[0] - min_x, point[1] - min_y) for point in destination_points
+        ]
+        texture_width, texture_height = texture.size
+        source_points = [
+            (
+                uv[0] * (texture_width - 1),
+                (1.0 - uv[1]) * (texture_height - 1),
+            )
+            for uv in uv_points
+        ]
+
+        coefficients = self._affine_coefficients(local_destination_points, source_points)
+        if coefficients is None:
+            return
+
+        patch_width = max_x - min_x
+        patch_height = max_y - min_y
+        warped = texture.transform(
+            (patch_width, patch_height),
+            Image.AFFINE,
+            coefficients,
+            resample=Image.BILINEAR,
+        ).convert("RGBA")
+
+        triangle_mask = Image.new("L", (patch_width, patch_height), 0)
+        ImageDraw.Draw(triangle_mask).polygon(local_destination_points, fill=255)
+
+        if mask_alpha is not None:
+            triangle_mask = ImageChops.multiply(triangle_mask, mask_alpha)
+
+        alpha = warped.getchannel("A")
+        warped.putalpha(ImageChops.multiply(alpha, triangle_mask))
+        canvas.alpha_composite(warped, (min_x, min_y))
+
+    def create_preview_image(self, skin_path, output_path):
+        self._render_preview_image(skin_path, output_path, rotation_degrees=0.0)
+
+    def create_upright_preview_image(self, skin_path, output_path):
+        """Crée une image d'aperçu du VRM à l'endroit."""
+        self._render_preview_image(skin_path, output_path, rotation_degrees=0.0)
+
+    def create_preview_image_180(self, skin_path, output_path):
+        """Crée une image d'aperçu du VRM tournée à 180°."""
+        self._render_preview_image(skin_path, output_path, rotation_degrees=180.0)
     
-    def generate_preview(self, skin_name):
+    def generate_preview(self, skin_name, rotation:int=0, rapide:bool=False, force:bool=False):
         """Génère une preview pour un skin spécifique"""
         skin_path = self.skins_dir / skin_name
         
@@ -608,28 +619,37 @@ class AvatarPreviewGenerator:
             print(f"Erreur: Le skin '{skin_name}' n'existe pas")
             return False
         
-        file_size = self.get_file_size(skin_path)
+        # file_size = self.get_file_size(skin_path)
         preview_name = skin_name.replace('.vrm', '.png')
         preview_path = self.preview_dir / preview_name
         
+        if preview_path.exists():
+            if rapide:
+                print(f"L'aperçu pour '{skin_name}' existe déjà. Passage au suivant.")
+                return True
+            else:
+                 # Supprimer l'aperçu existant pour le régénérer
+                os.remove(preview_path)
+                print(f"Régénération de l'aperçu pour {skin_name}")
+
         # Créer une image de preview à partir de la texture embarquée dans le VRM
-        self.create_preview_image(skin_path, preview_path)
+        self._render_preview_image(skin_path, preview_path, rotation_degrees=rotation, force=force)
         
         # Sauvegarder les métadonnées
-        metadata = {
-            'name': skin_name,
-            'file_size_mb': round(file_size, 2),
-            'preview_path': str(preview_path)
-        }
+        # metadata = {
+        #     'name': skin_name,
+        #     'file_size_mb': round(file_size, 2),
+        #     'preview_path': str(preview_path)
+        # }
         
-        metadata_path = self.preview_dir / f"{preview_name}.json"
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
+        # metadata_path = self.preview_dir / f"{preview_name}.json"
+        # with open(metadata_path, 'w') as f:
+        #     json.dump(metadata, f, indent=2)
         
         print(f"Preview générée: {preview_path}")
         return True
     
-    def generate_all_previews(self):
+    def generate_all_previews(self, rapide:bool=True):
         """Génère les previews pour tous les skins"""
         skins = self.get_available_skins()
         if not skins:
@@ -637,7 +657,7 @@ class AvatarPreviewGenerator:
             return
         
         for skin in skins:
-            self.generate_preview(skin)
+            self.generate_preview(skin, rapide=rapide)
         
         print(f"Génération terminée: {len(skins)} preview(s) créée(s)")
 
