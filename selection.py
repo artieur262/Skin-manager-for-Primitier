@@ -228,8 +228,11 @@ class Application(tk.Tk):
         self.minsize(860, 480)
         self.preview_image = None
 
+        self.up_panel = tk.Frame(self)
+        self.up_panel.pack(fill="x", pady=(2, 0))
+
         self.label_info = tk.Label(
-            self,
+            self.up_panel,
             text=f"Dossier des skins : {SKINS_DIR}",
             anchor="w",
             justify="left",
@@ -243,7 +246,7 @@ class Application(tk.Tk):
         liste_frame.pack(side="left", fill="both", expand=True)
 
         self.current_applied_label = tk.Label(
-            liste_frame,
+            self.up_panel,
             text="Skin actuellement appliqué : aucun",
             anchor="w",
             justify="left",
