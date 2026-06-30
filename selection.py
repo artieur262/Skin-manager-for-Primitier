@@ -465,6 +465,7 @@ class Application(tk.Tk):
 
         self.preview_nom.config(text=f"Nom : {skin_path.name}")
         self.preview_taille.config(text=f"Taille : {taille_ko:.1f} Ko")
+        self.fabriquer_bouton_tags(skin_path.name)
 
         if preview_path.exists():
             try:
@@ -514,7 +515,6 @@ class Application(tk.Tk):
                     self.listbox.selection_set(index)
                     self.listbox.see(index)
                     self.afficher_preview(skin)
-                    self.fabriquer_bouton_tags(skin.name)
                     break
         else:
             self.afficher_etat_vide()
