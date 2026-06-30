@@ -231,28 +231,32 @@ class Application(tk.Tk):
         self.up_panel = tk.Frame(self)
         self.up_panel.pack(fill="x", pady=(2, 0))
 
+       
+        # 2. On place ensuite le texte NOIR juste à sa droite
         self.label_info = tk.Label(
             self.up_panel,
             text=f"Dossier des skins : {SKINS_DIR}",
             anchor="w",
             justify="left",
         )
-        self.label_info.pack(fill="x", padx=10, pady=(10, 4))
+        self.label_info.pack(side="left", pady=10)
+
+
+        # 1. On place d'abord le texte VERT à gauche
+        self.current_applied_label = tk.Label(
+            self.up_panel,
+            text="Skin actuellement appliqué : aucun",
+            anchor="w",
+            justify="right",
+            fg="#1b5e20",
+        )
+        self.current_applied_label.pack(side="right", padx=(10, 20), pady=10)
 
         contenu = tk.Frame(self)
         contenu.pack(fill="both", expand=True, padx=10, pady=6)
 
         liste_frame = tk.Frame(contenu)
         liste_frame.pack(side="left", fill="both", expand=True)
-
-        self.current_applied_label = tk.Label(
-            self.up_panel,
-            text="Skin actuellement appliqué : aucun",
-            anchor="w",
-            justify="left",
-            fg="#1b5e20",
-        )
-        self.current_applied_label.pack(fill="x", pady=(0, 6))
 
         self.listbox = tk.Listbox(liste_frame, activestyle="dotbox")
         self.listbox.pack(fill="both", expand=True)
