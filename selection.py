@@ -162,14 +162,14 @@ def appliquer_skin(skin_path: Path) -> Path:
                     except Exception:
                         # en cas d'erreur, on continue pour tenter les autres fichiers
                         messagebox.showwarning(
-                            "Erreur",
-                            f"Impossible de supprimer le fichier {f.name} dans le dossier courant.",
+                            "Error",
+                            f"Unable to delete file {f.name} in the current directory.",
                         )
             except Exception:
                 # en cas d'erreur, on continue pour tenter les autres fichiers
                 messagebox.showwarning(
-                    "Erreur",
-                    f"Impossible de déplacer le fichier {f.name} dans le dossier skins.",
+                    "Error",
+                    f"Unable to move file {f.name} to the skins directory.",
                 )
             
 
@@ -233,7 +233,7 @@ def afficher_apercu_skin(skin_path: Path) -> bool:
 
     infos = [
         f"Name: {skin_path.name}",
-        f"Size: {taille_ko:.1f} Ko",
+        f"Size: {taille_ko:.1f} KB",
     ]
 
     for texte in infos:
@@ -269,7 +269,7 @@ class Application(tk.Tk):
         self.__favoris: set[str] = set(recuperer_liste_favoris())
         self.__recherche: str = ""
         self.__force_preview_generation: bool = False
-        self.title("Gestionnaire de skins VRM")
+        self.title("VRM Skin Manager")
         self.geometry("960x650")
         self.minsize(860, 650)
         self.preview_image = None
@@ -280,7 +280,7 @@ class Application(tk.Tk):
        
         self.label_info = tk.Label(
             self.up_panel,
-            text=f"Dossier des skins : {SKINS_DIR}",
+            text=f"Skins folder: {SKINS_DIR}",
             anchor="w",
             justify="left",
         )
@@ -289,7 +289,7 @@ class Application(tk.Tk):
 
         self.current_applied_label = tk.Label(
             self.up_panel,
-            text="Skin actuellement appliqué : aucun",
+            text="Currently applied skin: none",
             anchor="w",
             justify="right",
             fg="#1b5e20",
@@ -306,7 +306,7 @@ class Application(tk.Tk):
         self.recherche_bar.pack(fill="x", pady=(0, 8))
 
         self.recherche_bouton = tk.Button(
-            liste_frame, text="Rechercher", command=lambda: self.set_recherche(self.recherche_bar.get().strip())
+            liste_frame, text="Search", command=lambda: self.set_recherche(self.recherche_bar.get().strip())
         )
         self.recherche_bouton.pack(fill="x", pady=(0, 8))
 
@@ -330,7 +330,7 @@ class Application(tk.Tk):
         self.boutons_degre.pack(fill="x", pady=(2, 0))
 
         self.label_degre = tk.Label(
-            self.boutons_degre, text="Rotation de l'aperçu :"
+            self.boutons_degre, text="Preview rotation:"
         )
         self.label_degre.pack(side="left", padx=(0, 8))
 
@@ -346,7 +346,7 @@ class Application(tk.Tk):
 
         self.btn_force_preview = tk.Button(
             self.boutons_degre,
-            text="activer la régénération forcée",
+            text="enable forced regeneration",
             command=self.toggle_force_preview_generation
         )
         self.btn_force_preview.pack(side="right", padx=(8, 0))
@@ -362,7 +362,7 @@ class Application(tk.Tk):
 
         self.btn_ajouter_tags = tk.Button(
             self.panel_add_tags,
-            text="Ajouter un tag",
+            text="Add a tag",
             command=lambda: self.ajouter_tags(self.ajouter_tags_entry.get().strip())
         )
         self.btn_ajouter_tags.pack(fill="x", pady=(8, 0))
@@ -397,7 +397,7 @@ class Application(tk.Tk):
         self.btn_appliquer.pack(side="right")
 
         self.btn_favori = tk.Button(
-            preview_frame, text="Ajouter/Retirer des favoris", command=self.changer_le_favori
+            preview_frame, text="Add/Remove from favorites", command=self.changer_le_favori
         )
         self.btn_favori.pack(fill="x", pady=(8, 0))
 
@@ -460,9 +460,9 @@ class Application(tk.Tk):
 
     def actualiser_force_preview_button(self) -> None:
         if self.__force_preview_generation:
-            self.btn_force_preview.config(relief="sunken", text="désactiver la régénération forcée")
+            self.btn_force_preview.config(relief="sunken", text="disable forced regeneration")
         else:
-            self.btn_force_preview.config(relief="raised", text="activer la régénération forcée")
+            self.btn_force_preview.config(relief="raised", text="enable forced regeneration")
 
     def afficher_etat_vide(self) -> None:
         self.preview_image = None
@@ -504,8 +504,8 @@ class Application(tk.Tk):
         if not preview_path.exists():
             PREVIEW_GENERATOR.generate_preview(skin_path.name)
 
-        self.preview_nom.config(text=f"Nom : {skin_path.name}")
-        self.preview_taille.config(text=f"Taille : {taille_ko:.1f} Ko")
+        self.preview_nom.config(text=f"Name: {skin_path.name}")
+        self.preview_taille.config(text=f"Size: {taille_ko:.1f} KB")
         self.fabriquer_bouton_tags(skin_path.name)
 
         if preview_path.exists():
@@ -601,56 +601,56 @@ class Application(tk.Tk):
             )
             self.rafraichir()
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible d'appliquer le skin :\n{exc}")
+            messagebox.showerror("Error", f"Unable to apply skin:\n{exc}")
     
     def changer_le_favori(self) -> None:
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showwarning(
-                "Sélection manquante", "Choisis un skin dans la liste."
+                "Missing selection", "Choose a skin from the list."
             )
             return
 
         nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
-            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            messagebox.showerror("Error", "The selected file no longer exists.")
             self.rafraichir()
             return
 
         try:
             if self.is_skin_favori(skin_path.name):
                 self.remove_favori(skin_path.name)
-                self.status_message.set(f"Skin retiré des favoris : {skin_path.name}")
+                self.status_message.set(f"Skin removed from favorites: {skin_path.name}")
             else:
                 self.add_favori(skin_path.name)
-                self.status_message.set(f"Skin ajouté aux favoris : {skin_path.name}")
+                self.status_message.set(f"Skin added to favorites: {skin_path.name}")
             self.rafraichir(skin_path)
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible de changer le favori :\n{exc}")
+            messagebox.showerror("Error", f"Unable to change favorite status:\n{exc}")
 
     
     def changer_degre(self, degre: int) -> None:
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showwarning(
-                "Sélection manquante", "Choisis un skin dans la liste."
+                "Missing selection", "Choose a skin from the list."
             )
             return
 
         nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
-            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            messagebox.showerror("Error", "The selected file no longer exists.")
             self.rafraichir()
             return
 
         try:
             PREVIEW_GENERATOR.generate_preview(skin_path.name, rotation=degre, force=self.__force_preview_generation)
             self.afficher_preview(skin_path)
-            self.status_message.set(f"Aperçu du skin {skin_path.name} mis à jour à {degre}°")
+            self.status_message.set(f"Skin preview for {skin_path.name} updated to {degre}°")
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible de changer l'apercu :\n{exc}")
+            messagebox.showerror("Error", f"Unable to update preview:\n{exc}")
 
 
 
@@ -658,19 +658,19 @@ class Application(tk.Tk):
         """Ajoute un tag au skin sélectionné."""
         tag = tag.lower().strip()
         if not tag:
-            messagebox.showwarning("Tag vide", "Le tag ne peut pas être vide.")
+            messagebox.showwarning("Empty tag", "The tag cannot be empty.")
             return
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showwarning(
-                "Sélection manquante", "Choisis un skin dans la liste."
+                "Missing selection", "Choose a skin from the list."
             )
             return
 
         nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
-            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            messagebox.showerror("Error", "The selected file no longer exists.")
             self.rafraichir()
             return
 
@@ -679,26 +679,26 @@ class Application(tk.Tk):
             if tag not in tags:
                 tags.append(tag)
                 sauvegarder_tags(skin_path.name, tags)
-                self.status_message.set(f"Tag '{tag}' ajouté au skin {skin_path.name}")
+                self.status_message.set(f"Tag '{tag}' added to skin {skin_path.name}")
                 self.afficher_preview(skin_path)
             else:
-                messagebox.showinfo("Info", f"Le tag '{tag}' existe déjà pour ce skin.")
+                messagebox.showinfo("Info", f"The tag '{tag}' already exists for this skin.")
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible de supprimer le tag :\n{exc}")
+            messagebox.showerror("Error", f"Unable to add tag:\n{exc}")
 
     def suprimer_tags(self, tag:str) -> None:
         """Supprime un tag du skin sélectionné."""
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showwarning(
-                "Sélection manquante", "Choisis un skin dans la liste."
+                "Missing selection", "Choose a skin from the list."
             )
             return
 
         nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
-            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            messagebox.showerror("Error", "The selected file no longer exists.")
             self.rafraichir()
             return
 
@@ -707,12 +707,12 @@ class Application(tk.Tk):
             if tag in tags:
                 tags.remove(tag)
                 sauvegarder_tags(skin_path.name, tags)
-                self.status_message.set(f"Tag '{tag}' supprimé du skin {skin_path.name}")
+                self.status_message.set(f"Tag '{tag}' removed from skin {skin_path.name}")
                 self.rafraichir()
             else:
-                messagebox.showinfo("Info", f"Le tag '{tag}' n'existe pas pour ce skin.")
+                messagebox.showinfo("Info", f"The tag '{tag}' does not exist for this skin.")
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible de supprimer le tag :\n{exc}")
+            messagebox.showerror("Error", f"Unable to delete tag:\n{exc}")
 
 
     def fabriquer_bouton_tags(self, skin_name: str) -> None:
@@ -721,7 +721,7 @@ class Application(tk.Tk):
             widget.destroy()
         if not skin_name:
             return
-        label_tags = tk.Label(self.panel_get_tags, text="Tags :")
+        label_tags = tk.Label(self.panel_get_tags, text="Tags:")
         label_tags.pack(side="left", pady=10, padx=(0, 4))
         for tag in lister_tags(skin_name):
             btn = tk.Button(
