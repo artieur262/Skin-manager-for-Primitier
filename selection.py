@@ -222,6 +222,7 @@ class Application(tk.Tk):
 
         self.__options: dict = recuperer_options()
         self.__favoris: set[str] = set(recuperer_liste_favoris())
+        self.__recherche: str = ""
         self.__force_preview_generation: bool = False
         self.title("Gestionnaire de skins VRM")
         self.geometry("960x540")
@@ -257,6 +258,14 @@ class Application(tk.Tk):
 
         liste_frame = tk.Frame(contenu)
         liste_frame.pack(side="left", fill="both", expand=True)
+
+        self.recherche_bar = tk.Entry(liste_frame)
+        self.recherche_bar.pack(fill="x", pady=(0, 8))
+
+        self.recherche_bouton = tk.Button(
+            liste_frame, text="Rechercher", command=lambda: self.set_recherche(self.recherche_bar.get().strip())
+        )
+        self.recherche_bouton.pack(fill="x", pady=(0, 8))
 
         self.listbox = tk.Listbox(liste_frame, activestyle="dotbox")
         self.listbox.pack(fill="both", expand=True)
@@ -389,6 +398,13 @@ class Application(tk.Tk):
     def get_force_preview_generation(self) -> bool:
         return self.__force_preview_generation
     
+    def get_recherche(self) -> str:
+        return self.__recherche
+    
+    def set_recherche(self, value: str) -> None:
+        self.__recherche = value.lower()
+        self.rafraichir()
+    
     def set_force_preview_generation(self, value: bool) -> None:
         self.__force_preview_generation = value
         self.update_options("force_preview_generation", value)
@@ -486,7 +502,8 @@ class Application(tk.Tk):
         self.listbox.config(state="normal")
         self.btn_appliquer.config(state="normal")
         for skin in skins:
-            self.listbox.insert(tk.END, self.nom_skin_affiche(skin, skin_applique))
+            if self.correspondre_recherche(skin.name):
+                self.listbox.insert(tk.END, self.nom_skin_affiche(skin, skin_applique))
 
         self.mettre_en_evidence_skin_applique()
 
@@ -596,6 +613,10 @@ class Application(tk.Tk):
 
     def ajouter_tags(self, tag:str) -> None:
         """Ajoute un tag au skin sélectionné."""
+        tag = tag.lower().strip()
+        if not tag:
+            messagebox.showwarning("Tag vide", "Le tag ne peut pas être vide.")
+            return
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showwarning(
@@ -665,12 +686,22 @@ class Application(tk.Tk):
             )
             btn.pack(fill="x", pady=(2, 0))
 
+    def correspondre_recherche(self, skin_name: str) -> bool:
+        """Vérifie si le skin correspond à la recherche."""
+        if not self.get_recherche():
+            return True
+        if self.get_recherche()[0] == "#":
+            # recherche par tag
+            tag_recherche = self.get_recherche()[1:]
+            tags = lister_tags(skin_name)
+            return tag_recherche in tags
+        else:
+            return self.get_recherche() in skin_name.lower()
 
 def main() -> None:
     SKINS_DIR.mkdir(exist_ok=True)
     app = Application()
     app.mainloop()
-
 
 if __name__ == "__main__":
     main()
