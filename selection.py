@@ -144,7 +144,10 @@ def appliquer_skin(skin_path: Path) -> Path:
             try:
                 # Déplace le fichier dans le dossier skins
                 destination = SKINS_DIR / f.name
-                shutil.move(f, destination)
+                if not destination.exists():
+                    shutil.move(f, destination)
+                
+                
                 # Supprime le fichier
                 try:
                     f.unlink()
