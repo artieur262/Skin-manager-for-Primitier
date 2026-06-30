@@ -147,16 +147,16 @@ def appliquer_skin(skin_path: Path) -> Path:
                 if not destination.exists():
                     shutil.move(f, destination)
                 
-                
-                # Supprime le fichier
-                try:
-                    f.unlink()
-                except Exception:
-                    # en cas d'erreur, on continue pour tenter les autres fichiers
-                    messagebox.showwarning(
-                        "Erreur",
-                        f"Impossible de supprimer le fichier {f.name} dans le dossier courant.",
-                    )
+                else :
+                    # Supprime le fichier
+                    try:
+                        f.unlink()
+                    except Exception:
+                        # en cas d'erreur, on continue pour tenter les autres fichiers
+                        messagebox.showwarning(
+                            "Erreur",
+                            f"Impossible de supprimer le fichier {f.name} dans le dossier courant.",
+                        )
             except Exception:
                 # en cas d'erreur, on continue pour tenter les autres fichiers
                 messagebox.showwarning(
