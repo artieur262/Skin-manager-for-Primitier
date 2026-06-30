@@ -225,15 +225,14 @@ class Application(tk.Tk):
         self.__recherche: str = ""
         self.__force_preview_generation: bool = False
         self.title("Gestionnaire de skins VRM")
-        self.geometry("960x540")
-        self.minsize(860, 480)
+        self.geometry("960x650")
+        self.minsize(860, 650)
         self.preview_image = None
 
         self.up_panel = tk.Frame(self)
         self.up_panel.pack(fill="x", pady=(2, 0))
 
        
-        # 2. On place ensuite le texte NOIR juste à sa droite
         self.label_info = tk.Label(
             self.up_panel,
             text=f"Dossier des skins : {SKINS_DIR}",
@@ -243,7 +242,6 @@ class Application(tk.Tk):
         self.label_info.pack(side="left", pady=10)
 
 
-        # 1. On place d'abord le texte VERT à gauche
         self.current_applied_label = tk.Label(
             self.up_panel,
             text="Skin actuellement appliqué : aucun",
@@ -442,9 +440,7 @@ class Application(tk.Tk):
     def nom_skin_reel(self, nom_affiche: str) -> str:
         return nom_affiche.lstrip(" ✓").lstrip("♥ ")
 
-    def mettre_en_evidence_skin(self, skin_name: str) -> None:
-        """Met en évidence le skin appliqué dans la liste."""
-        pass
+    
         
 
     def mettre_en_evidence_skin_applique(self) -> None:
@@ -485,7 +481,8 @@ class Application(tk.Tk):
             fg="gray",
         )
                 
-    def rafraichir(self) -> None:
+    def rafraichir(self, skin_selected:str=None) -> None:
+        
         self.listbox.delete(0, tk.END)
         skins = lister_skins()
         skin_applique = self.skin_applique_actuel()
@@ -507,11 +504,13 @@ class Application(tk.Tk):
                 self.listbox.insert(tk.END, self.nom_skin_affiche(skin, skin_applique))
 
         self.mettre_en_evidence_skin_applique()
+        if skin_selected is None:
+            skin_selected : Path | None = skin_applique
 
-        self.listbox.selection_clear(0, tk.END)
-        if skin_applique is not None:
+        self.listbox.selection_clear(0, tk.END) 
+        if skin_selected is not None:
             for index, skin in enumerate(skins):
-                if skin.name == skin_applique.name:
+                if skin.name == skin_selected.name:
                     self.listbox.selection_set(index)
                     self.listbox.see(index)
                     self.afficher_preview(skin)
@@ -519,8 +518,7 @@ class Application(tk.Tk):
         else:
             self.afficher_etat_vide()
         
-    
-    
+  
 
     def on_skin_selected(self, event: tk.Event) -> None:
         selection = self.listbox.curselection()
@@ -582,7 +580,7 @@ class Application(tk.Tk):
             else:
                 self.add_favori(skin_path.name)
                 self.status_message.set(f"Skin ajouté aux favoris : {skin_path.name}")
-            self.rafraichir()
+            self.rafraichir(skin_path)
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible de changer le favori :\n{exc}")
 
@@ -604,7 +602,7 @@ class Application(tk.Tk):
 
         try:
             PREVIEW_GENERATOR.generate_preview(skin_path.name, rotation=degre, force=self.__force_preview_generation)
-            self.rafraichir()
+            self.afficher_preview(skin_path)
             self.status_message.set(f"Aperçu du skin {skin_path.name} mis à jour à {degre}°")
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible de changer l'apercu :\n{exc}")
@@ -637,7 +635,7 @@ class Application(tk.Tk):
                 tags.append(tag)
                 sauvegarder_tags(skin_path.name, tags)
                 self.status_message.set(f"Tag '{tag}' ajouté au skin {skin_path.name}")
-                self.rafraichir()
+                self.afficher_preview(skin_path)
             else:
                 messagebox.showinfo("Info", f"Le tag '{tag}' existe déjà pour ce skin.")
         except Exception as exc:  # pragma: no cover - interface utilisateur
@@ -678,13 +676,15 @@ class Application(tk.Tk):
             widget.destroy()
         if not skin_name:
             return
+        label_tags = tk.Label(self.panel_get_tags, text="Tags :")
+        label_tags.pack(side="left", pady=10, padx=(0, 4))
         for tag in lister_tags(skin_name):
             btn = tk.Button(
                 self.panel_get_tags,
                 text=f"'{tag}'",
                 command=lambda t=tag: self.suprimer_tags(t)
             )
-            btn.pack(fill="x", pady=(2, 0))
+            btn.pack(side="left", pady=10, padx=4)
 
     def correspondre_recherche(self, skin_name: str) -> bool:
         """Vérifie si le skin correspond à la recherche."""
