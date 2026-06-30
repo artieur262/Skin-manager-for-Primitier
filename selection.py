@@ -82,10 +82,9 @@ def lister_tags(skin_name: str) -> List[str]:
     TAGS_DIR.mkdir(exist_ok=True)
     tag_file = TAGS_DIR / f"{skin_name}.json"
     if not tag_file.exists():
-        with open(tag_file, "w", encoding="utf-8") as f:
-            json.dump([], f, indent=4)
         return []
     try:
+        # Lire le fichier JSON et retourner la liste des tags
         with open(tag_file, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
@@ -95,6 +94,15 @@ def sauvegarder_tags(skin_name: str, tags: List[str]) -> None:
     """Sauvegarde la liste des tags associés à un skin."""
     TAGS_DIR.mkdir(exist_ok=True)
     tag_file = TAGS_DIR / f"{skin_name}.json"
+    if not tags:
+        # Supprimer le fichier si la liste des tags est vide
+        try:
+            if tag_file.exists():
+                tag_file.unlink()
+        except Exception:
+            pass
+        return
+    # Sauvegarder la liste des tags dans le fichier JSON
     try:
         with open(tag_file, "w", encoding="utf-8") as f:
             json.dump(tags, f, indent=4)
