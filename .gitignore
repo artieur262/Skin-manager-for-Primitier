@@ -5,3 +5,4 @@ options/
 tags/
 __pycache__/
 *.vrm
+test.png
