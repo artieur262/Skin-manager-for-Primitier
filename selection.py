@@ -115,6 +115,21 @@ def lister_skins() -> List[Path]:
 
 def appliquer_skin(skin_path: Path) -> Path:
     """Copie le skin choisi dans le dossier courant du script."""
+
+    # dépalcer les anciens fichiers .vrm dans un sous dossier "skins" pour les garder en backup
+    # s'il n'existe pas dans le dossier skins, on le déplace dans le dossier skins
+    SKINS_DIR.mkdir(exist_ok=True)
+    for f in BASE_DIR.iterdir():
+        if f.is_file() and f.suffix.lower() == ".vrm":
+            try:
+                # n'efface pas le fichier source dans le dossier skins
+                if f.resolve() == skin_path.resolve():
+                    continue
+            except Exception:
+                pass
+            
+
+
     # Supprime les anciens fichiers .vrm présents dans le dossier courant
     for f in BASE_DIR.iterdir():
         if f.is_file() and f.suffix.lower() == ".vrm":
@@ -124,11 +139,30 @@ def appliquer_skin(skin_path: Path) -> Path:
                     continue
             except Exception:
                 pass
+
+           
             try:
-                f.unlink()
+                # Déplace le fichier dans le dossier skins
+                destination = SKINS_DIR / f.name
+                shutil.move(f, destination)
+                # Supprime le fichier
+                try:
+                    f.unlink()
+                except Exception:
+                    # en cas d'erreur, on continue pour tenter les autres fichiers
+                    messagebox.showwarning(
+                        "Erreur",
+                        f"Impossible de supprimer le fichier {f.name} dans le dossier courant.",
+                    )
             except Exception:
                 # en cas d'erreur, on continue pour tenter les autres fichiers
-                pass
+                messagebox.showwarning(
+                    "Erreur",
+                    f"Impossible de déplacer le fichier {f.name} dans le dossier skins.",
+                )
+            
+
+            
 
     destination = BASE_DIR / skin_path.name
     shutil.copy2(skin_path, destination)
