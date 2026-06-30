@@ -25,6 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent
 SKINS_DIR = BASE_DIR / "skins"
 APERCU_DIR = BASE_DIR / "apercus"
 OPTIONS_DIR = BASE_DIR / "options"
+TAGS_DIR = BASE_DIR / "tags"
 
 PREVIEW_GENERATOR = AvatarPreviewGenerator(SKINS_DIR, APERCU_DIR)
 
@@ -76,31 +77,29 @@ def sauvegarder_liste_favoris(favoris: List[str]) -> None:
     except Exception:
         pass
 
-def recuperer_tags_skins() -> dict:
-    """Récupère les tags des skins depuis le fichier tags.json."""
-    OPTIONS_DIR.mkdir(exist_ok=True)
-    tags_file = OPTIONS_DIR / "tags.json"
-    if not tags_file.exists():
-        with open(tags_file, "w", encoding="utf-8") as f:
-            json.dump({}, f, indent=4)
-        return {}
+def lister_tags(skin_name: str) -> List[str]:
+    """Retourne la liste des tags associés à un skin."""
+    TAGS_DIR.mkdir(exist_ok=True)
+    tag_file = TAGS_DIR / f"{skin_name}.json"
+    if not tag_file.exists():
+        with open(tag_file, "w", encoding="utf-8") as f:
+            json.dump([], f, indent=4)
+        return []
     try:
-        with open(tags_file, "r", encoding="utf-8") as f:
+        with open(tag_file, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {}
-    
-def sauvegarder_tags_skins(tags: dict) -> None:
-    """Sauvegarde les tags des skins dans le fichier tags.json."""
-    OPTIONS_DIR.mkdir(exist_ok=True)
-    tags_file = OPTIONS_DIR / "tags.json"
+        return []
+
+def sauvegarder_tags(skin_name: str, tags: List[str]) -> None:
+    """Sauvegarde la liste des tags associés à un skin."""
+    TAGS_DIR.mkdir(exist_ok=True)
+    tag_file = TAGS_DIR / f"{skin_name}.json"
     try:
-        with open(tags_file, "w", encoding="utf-8") as f:
+        with open(tag_file, "w", encoding="utf-8") as f:
             json.dump(tags, f, indent=4)
     except Exception:
         pass
-
-
 
 def lister_skins() -> List[Path]:
     """Retourne la liste des fichiers .vrm disponibles."""
@@ -293,6 +292,23 @@ class Application(tk.Tk):
         )
         self.btn_force_preview.pack(side="right", padx=(8, 0))
 
+        self.panel_get_tags = tk.Frame(preview_frame)
+        self.panel_get_tags.pack(fill="x", pady=(8, 0))
+
+        self.panel_add_tags = tk.Frame(preview_frame)
+        self.panel_add_tags.pack(fill="x", pady=(8, 0))
+
+        self.ajouter_tags_entry = tk.Entry(self.panel_add_tags)
+        self.ajouter_tags_entry.pack(fill="x", pady=(8, 0))
+
+        self.btn_ajouter_tags = tk.Button(
+            self.panel_add_tags,
+            text="Ajouter un tag",
+            command=lambda: self.ajouter_tags(self.ajouter_tags_entry.get().strip())
+        )
+        self.btn_ajouter_tags.pack(fill="x", pady=(8, 0))
+
+
         self.preview_image_label = tk.Label(
             preview_frame,
             text="Aucune image",
@@ -474,9 +490,13 @@ class Application(tk.Tk):
                     self.listbox.selection_set(index)
                     self.listbox.see(index)
                     self.afficher_preview(skin)
+                    self.fabriquer_bouton_tags(skin.name)
                     break
         else:
             self.afficher_etat_vide()
+        
+    
+    
 
     def on_skin_selected(self, event: tk.Event) -> None:
         selection = self.listbox.curselection()
@@ -565,6 +585,78 @@ class Application(tk.Tk):
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible de changer l'apercu :\n{exc}")
 
+
+
+    def ajouter_tags(self, tag:str) -> None:
+        """Ajoute un tag au skin sélectionné."""
+        selection = self.listbox.curselection()
+        if not selection:
+            messagebox.showwarning(
+                "Sélection manquante", "Choisis un skin dans la liste."
+            )
+            return
+
+        nom = self.nom_skin_reel(self.listbox.get(selection[0]))
+        skin_path = SKINS_DIR / nom
+        if not skin_path.exists():
+            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            self.rafraichir()
+            return
+
+        try:
+            tags = lister_tags(skin_path.name)
+            if tag not in tags:
+                tags.append(tag)
+                sauvegarder_tags(skin_path.name, tags)
+                self.status_message.set(f"Tag '{tag}' ajouté au skin {skin_path.name}")
+                self.rafraichir()
+            else:
+                messagebox.showinfo("Info", f"Le tag '{tag}' existe déjà pour ce skin.")
+        except Exception as exc:  # pragma: no cover - interface utilisateur
+            messagebox.showerror("Erreur", f"Impossible de supprimer le tag :\n{exc}")
+
+    def suprimer_tags(self, tag:str) -> None:
+        """Supprime un tag du skin sélectionné."""
+        selection = self.listbox.curselection()
+        if not selection:
+            messagebox.showwarning(
+                "Sélection manquante", "Choisis un skin dans la liste."
+            )
+            return
+
+        nom = self.nom_skin_reel(self.listbox.get(selection[0]))
+        skin_path = SKINS_DIR / nom
+        if not skin_path.exists():
+            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            self.rafraichir()
+            return
+
+        try:
+            tags = lister_tags(skin_path.name)
+            if tag in tags:
+                tags.remove(tag)
+                sauvegarder_tags(skin_path.name, tags)
+                self.status_message.set(f"Tag '{tag}' supprimé du skin {skin_path.name}")
+                self.rafraichir()
+            else:
+                messagebox.showinfo("Info", f"Le tag '{tag}' n'existe pas pour ce skin.")
+        except Exception as exc:  # pragma: no cover - interface utilisateur
+            messagebox.showerror("Erreur", f"Impossible de supprimer le tag :\n{exc}")
+
+
+    def fabriquer_bouton_tags(self, skin_name: str) -> None:
+        """Fabrique un bouton pour supprimer un tag du skin sélectionné."""
+        for widget in self.panel_get_tags.winfo_children():
+            widget.destroy()
+        if not skin_name:
+            return
+        for tag in lister_tags(skin_name):
+            btn = tk.Button(
+                self.panel_get_tags,
+                text=f"'{tag}'",
+                command=lambda t=tag: self.suprimer_tags(t)
+            )
+            btn.pack(fill="x", pady=(2, 0))
 
 
 def main() -> None:
