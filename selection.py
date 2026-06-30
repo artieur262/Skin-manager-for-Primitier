@@ -76,6 +76,31 @@ def sauvegarder_liste_favoris(favoris: List[str]) -> None:
     except Exception:
         pass
 
+def recuperer_tags_skins() -> dict:
+    """Récupère les tags des skins depuis le fichier tags.json."""
+    OPTIONS_DIR.mkdir(exist_ok=True)
+    tags_file = OPTIONS_DIR / "tags.json"
+    if not tags_file.exists():
+        with open(tags_file, "w", encoding="utf-8") as f:
+            json.dump({}, f, indent=4)
+        return {}
+    try:
+        with open(tags_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+    
+def sauvegarder_tags_skins(tags: dict) -> None:
+    """Sauvegarde les tags des skins dans le fichier tags.json."""
+    OPTIONS_DIR.mkdir(exist_ok=True)
+    tags_file = OPTIONS_DIR / "tags.json"
+    try:
+        with open(tags_file, "w", encoding="utf-8") as f:
+            json.dump(tags, f, indent=4)
+    except Exception:
+        pass
+
+
 
 def lister_skins() -> List[Path]:
     """Retourne la liste des fichiers .vrm disponibles."""
@@ -85,6 +110,8 @@ def lister_skins() -> List[Path]:
         [f for f in SKINS_DIR.iterdir() if f.is_file() and f.suffix.lower() == ".vrm"],
         key=lambda p: p.name.lower(),
     )
+
+
 
 
 def appliquer_skin(skin_path: Path) -> Path:
