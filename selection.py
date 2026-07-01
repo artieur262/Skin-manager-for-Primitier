@@ -8,176 +8,31 @@ quand on clique sur un skin on doit avoir un aperçu du skin à coté de la list
 l'apperçu doit avoir le nom du skin, une image du skin et la taille du fichier
 
 """
-import os
-import shutil
-import json
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
-from typing import List, Optional
+from typing import Optional
 
 
 from PIL import Image, ImageTk
 
-from genreator import AvatarPreviewGenerator
-
-BASE_DIR = Path(__file__).resolve().parent
-SKINS_DIR = BASE_DIR / "skins"
-APERCU_DIR = BASE_DIR / "apercus"
-OPTIONS_DIR = BASE_DIR / "options"
-TAGS_DIR = BASE_DIR / "tags"
-
-PREVIEW_GENERATOR = AvatarPreviewGenerator(SKINS_DIR, APERCU_DIR)
-
-def recuperer_options() -> dict:
-    """Récupère les options depuis le fichier options.json."""
-    OPTIONS_DIR.mkdir(exist_ok=True)
-    options_file = OPTIONS_DIR / "options.json"
-    if not options_file.exists():
-        with open(options_file, "w", encoding="utf-8") as f:
-            json.dump({}, f, indent=4)
-        return {}
-    try:
-        with open(options_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
-    
-def sauvegarder_options(options: dict) -> None:
-    """Sauvegarde les options dans le fichier options.json."""
-    OPTIONS_DIR.mkdir(exist_ok=True)
-    options_file = OPTIONS_DIR / "options.json"
-    try:
-        with open(options_file, "w", encoding="utf-8") as f:
-            json.dump(options, f, indent=4)
-    except Exception:
-        pass
-
-def recuperer_liste_favoris() -> List[str]:
-    """Récupère la liste des skins favoris depuis le fichier favoris.json."""
-    OPTIONS_DIR.mkdir(exist_ok=True)
-    favoris_file = OPTIONS_DIR / "favoris.json"
-    if not favoris_file.exists():
-        with open(favoris_file, "w", encoding="utf-8") as f:
-            json.dump([], f, indent=4)
-        return []
-    try:
-        with open(favoris_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-def sauvegarder_liste_favoris(favoris: List[str]) -> None:
-    """Sauvegarde la liste des skins favoris dans le fichier favoris.json."""
-    OPTIONS_DIR.mkdir(exist_ok=True)
-    favoris_file = OPTIONS_DIR / "favoris.json"
-    try:
-        with open(favoris_file, "w", encoding="utf-8") as f:
-            json.dump(favoris, f, indent=4)
-    except Exception:
-        pass
-
-def lister_tags(skin_name: str) -> List[str]:
-    """Retourne la liste des tags associés à un skin."""
-    TAGS_DIR.mkdir(exist_ok=True)
-    tag_file = TAGS_DIR / f"{skin_name}.json"
-    if not tag_file.exists():
-        return []
-    try:
-        # Lire le fichier JSON et retourner la liste des tags
-        with open(tag_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-def sauvegarder_tags(skin_name: str, tags: List[str]) -> None:
-    """Sauvegarde la liste des tags associés à un skin."""
-    TAGS_DIR.mkdir(exist_ok=True)
-    tag_file = TAGS_DIR / f"{skin_name}.json"
-    if not tags:
-        # Supprimer le fichier si la liste des tags est vide
-        try:
-            if tag_file.exists():
-                tag_file.unlink()
-        except Exception:
-            pass
-        return
-    # Sauvegarder la liste des tags dans le fichier JSON
-    try:
-        with open(tag_file, "w", encoding="utf-8") as f:
-            json.dump(tags, f, indent=4)
-    except Exception:
-        pass
-
-def lister_skins() -> List[Path]:
-    """Retourne la liste des fichiers .vrm disponibles."""
-    if not SKINS_DIR.exists():
-        return []
-    return sorted(
-        [f for f in SKINS_DIR.iterdir() if f.is_file() and f.suffix.lower() == ".vrm"],
-        key=lambda p: p.name.lower(),
-    )
-
-
-
-
-def appliquer_skin(skin_path: Path) -> Path:
-    """Copie le skin choisi dans le dossier courant du script."""
-
-    # dépalcer les anciens fichiers .vrm dans un sous dossier "skins" pour les garder en backup
-    # s'il n'existe pas dans le dossier skins, on le déplace dans le dossier skins
-    SKINS_DIR.mkdir(exist_ok=True)
-    for f in BASE_DIR.iterdir():
-        if f.is_file() and f.suffix.lower() == ".vrm":
-            try:
-                # n'efface pas le fichier source dans le dossier skins
-                if f.resolve() == skin_path.resolve():
-                    continue
-            except Exception:
-                pass
-            
-
-
-    # Supprime les anciens fichiers .vrm présents dans le dossier courant
-    for f in BASE_DIR.iterdir():
-        if f.is_file() and f.suffix.lower() == ".vrm":
-            try:
-                # n'efface pas le fichier source dans le dossier skins
-                if f.resolve() == skin_path.resolve():
-                    continue
-            except Exception:
-                pass
-
-           
-            try:
-                # Déplace le fichier dans le dossier skins
-                destination = SKINS_DIR / f.name
-                if not destination.exists():
-                    shutil.move(f, destination)
-                
-                else :
-                    # Supprime le fichier
-                    try:
-                        f.unlink()
-                    except Exception:
-                        # en cas d'erreur, on continue pour tenter les autres fichiers
-                        messagebox.showwarning(
-                            "Erreur",
-                            f"Impossible de supprimer le fichier {f.name} dans le dossier courant.",
-                        )
-            except Exception:
-                # en cas d'erreur, on continue pour tenter les autres fichiers
-                messagebox.showwarning(
-                    "Erreur",
-                    f"Impossible de déplacer le fichier {f.name} dans le dossier skins.",
-                )
-            
-
-            
-
-    destination = BASE_DIR / skin_path.name
-    shutil.copy2(skin_path, destination)
-    return destination
+from skins_core import (
+    SKINS_DIR,
+    APERCU_DIR,
+    OPTIONS_DIR,
+    TAGS_DIR,
+    PREVIEW_GENERATOR,
+    recuperer_options,
+    sauvegarder_options,
+    recuperer_liste_favoris,
+    sauvegarder_liste_favoris,
+    lister_tags,
+    sauvegarder_tags,
+    lister_skins,
+    skin_applique_actuel,
+    appliquer_skin,
+    correspondre_recherche,
+)
 
 
 def afficher_apercu_skin(skin_path: Path) -> bool:
@@ -269,6 +124,7 @@ class Application(tk.Tk):
         self.__favoris: set[str] = set(recuperer_liste_favoris())
         self.__recherche: str = ""
         self.__force_preview_generation: bool = False
+        self.next_mode: Optional[str] = None
         self.title("Gestionnaire de skins VRM")
         self.geometry("960x650")
         self.minsize(860, 650)
@@ -286,6 +142,10 @@ class Application(tk.Tk):
         )
         self.label_info.pack(side="left", pady=10)
 
+        self.btn_vue_grille = tk.Button(
+            self.up_panel, text="Vue grille ▦", command=self.passer_en_vue_grille
+        )
+        self.btn_vue_grille.pack(side="right", padx=(10, 0), pady=10)
 
         self.current_applied_label = tk.Label(
             self.up_panel,
@@ -470,11 +330,9 @@ class Application(tk.Tk):
         self.preview_image_label.config(image="", text="Aucune image", fg="gray")
         self.preview_taille.config(text="")
 
-    def skin_applique_actuel(self) -> Optional[Path]:
-        for skin in lister_skins():
-            if (BASE_DIR / skin.name).exists():
-                return skin
-        return None
+    def passer_en_vue_grille(self) -> None:
+        self.next_mode = "grille"
+        self.destroy()
 
     def nom_skin_affiche(self, skin: Path, skin_applique: Optional[Path]) -> str:
         name = ("♥ " if self.is_skin_favori(skin.name) else "") + skin.name
@@ -489,7 +347,7 @@ class Application(tk.Tk):
         
 
     def mettre_en_evidence_skin_applique(self) -> None:
-        skin_applique = self.skin_applique_actuel()
+        skin_applique = skin_applique_actuel()
         if skin_applique is None:
             self.current_applied_label.config(text="Skin actuellement appliqué : aucun")
         else:
@@ -530,7 +388,7 @@ class Application(tk.Tk):
         
         self.listbox.delete(0, tk.END)
         skins = lister_skins()
-        skin_applique = self.skin_applique_actuel()
+        skin_applique = skin_applique_actuel()
 
         if not skins:
             self.listbox.insert(
@@ -545,7 +403,7 @@ class Application(tk.Tk):
         self.listbox.config(state="normal")
         self.btn_appliquer.config(state="normal")
         for skin in skins:
-            if self.correspondre_recherche(skin.name):
+            if correspondre_recherche(skin.name, self.get_recherche()):
                 self.listbox.insert(tk.END, self.nom_skin_affiche(skin, skin_applique))
 
         self.mettre_en_evidence_skin_applique()
@@ -731,22 +589,19 @@ class Application(tk.Tk):
             )
             btn.pack(side="left", pady=10, padx=4)
 
-    def correspondre_recherche(self, skin_name: str) -> bool:
-        """Vérifie si le skin correspond à la recherche."""
-        if not self.get_recherche():
-            return True
-        if self.get_recherche()[0] == "#":
-            # recherche par tag
-            tag_recherche = self.get_recherche()[1:]
-            tags = lister_tags(skin_name)
-            return tag_recherche in tags
-        else:
-            return self.get_recherche() in skin_name.lower()
 
 def main() -> None:
     SKINS_DIR.mkdir(exist_ok=True)
-    app = Application()
-    app.mainloop()
+    mode = "liste"
+    while mode:
+        if mode == "liste":
+            app = Application()
+        else:
+            from main import ApplicationGrille
+
+            app = ApplicationGrille()
+        app.mainloop()
+        mode = getattr(app, "next_mode", None)
 
 if __name__ == "__main__":
     main()
