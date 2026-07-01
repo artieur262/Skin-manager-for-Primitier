@@ -421,7 +421,7 @@ def main() -> None:
         if mode == "grille":
             app = ApplicationGrille()
         else:
-            from selection import Application
+            from configure import Application
 
             app = Application()
         app.mainloop()

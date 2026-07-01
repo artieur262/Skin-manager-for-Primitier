@@ -120,6 +120,67 @@ def skin_applique_actuel() -> Optional[Path]:
     return None
 
 
+CARACTERES_INVALIDES = set('\\/:*?"<>|')
+
+
+def renommer_skin(skin_path: Path, nouveau_nom: str) -> Path:
+    """Renomme un skin ainsi que son fichier de tags et son aperçu associés.
+
+    Le nom de fichier de l'aperçu et celui du fichier de tags sont dérivés
+    du nom du skin (même base), donc ils doivent être renommés en même
+    temps pour ne pas se retrouver orphelins.
+    """
+    nouveau_nom = nouveau_nom.strip()
+    if not nouveau_nom:
+        raise ValueError("Le nouveau nom ne peut pas être vide.")
+    if any(caractere in CARACTERES_INVALIDES for caractere in nouveau_nom):
+        raise ValueError('Le nom ne peut pas contenir : \\ / : * ? " < > |')
+    if not nouveau_nom.lower().endswith(".vrm"):
+        nouveau_nom += ".vrm"
+
+    ancien_nom = skin_path.name
+    destination = SKINS_DIR / nouveau_nom
+    if ancien_nom == nouveau_nom:
+        return skin_path
+    if destination.exists():
+        raise FileExistsError(f"Un skin nommé '{nouveau_nom}' existe déjà.")
+
+    skin_path.rename(destination)
+
+    ancien_apercu = APERCU_DIR / Path(ancien_nom).with_suffix(".png").name
+    nouvel_apercu = APERCU_DIR / destination.with_suffix(".png").name
+    if ancien_apercu.exists():
+        try:
+            ancien_apercu.replace(nouvel_apercu)
+        except Exception:
+            pass
+
+    ancien_tags = TAGS_DIR / f"{ancien_nom}.json"
+    nouveau_tags = TAGS_DIR / f"{nouveau_nom}.json"
+    if ancien_tags.exists():
+        try:
+            ancien_tags.replace(nouveau_tags)
+        except Exception:
+            pass
+
+    favoris = recuperer_liste_favoris()
+    if ancien_nom in favoris:
+        sauvegarder_liste_favoris(
+            [nouveau_nom if favori == ancien_nom else favori for favori in favoris]
+        )
+
+    # Si ce skin est actuellement appliqué à la racine du projet, on garde
+    # le fichier appliqué cohérent avec le nouveau nom.
+    applique = BASE_DIR / ancien_nom
+    if applique.exists():
+        try:
+            applique.replace(BASE_DIR / nouveau_nom)
+        except Exception:
+            pass
+
+    return destination
+
+
 def appliquer_skin(skin_path: Path) -> Path:
     """Copie le skin choisi dans le dossier courant du script."""
     SKINS_DIR.mkdir(exist_ok=True)

@@ -13,8 +13,8 @@ Ce projet fournit une petite interface graphique pour choisir un skin au format 
 ## Ce que font les programmes
 
 - `skins_core.py` contient la logique commune (lecture des skins, favoris, tags, options, application du skin) utilisée par les deux interfaces.
-- `selection.py` est l’interface « liste » : une liste texte des skins avec un panneau de configuration détaillé (rotation de l’aperçu, tags, régénération forcée).
-- `selection_grille.py` est l’interface « grille » : une grille visuelle de vignettes façon menu de sélection de skins, avec onglets Tous/Favoris et recherche, sans les réglages avancés.
+- `configure.py` est l’interface « liste » : une liste texte des skins avec un panneau de configuration détaillé (rotation de l’aperçu, tags, régénération forcée).
+- `main.py` est l’interface « grille » : une grille visuelle de vignettes façon menu de sélection de skins, avec onglets Tous/Favoris et recherche, sans les réglages avancés.
 - `genreator.py` génère les images d’aperçu utilisées par les deux interfaces. Il lit le fichier `.vrm` et crée une image stockée dans `apercus/`.
 - Les trois scripts travaillent ensemble : les interfaces appellent `genreator.py` quand un aperçu doit être créé ou mis à jour, et s’appuient sur `skins_core.py` pour toutes les opérations sur les skins.
 - Un bouton en haut de chaque interface (« Vue grille » / « Vue liste ») permet de passer de l’une à l’autre à tout moment, sans perdre le skin actuellement appliqué.
@@ -35,13 +35,13 @@ pip install pillow
 Depuis le dossier du projet, exécute l’une des deux interfaces (le bouton de bascule permet de rejoindre l’autre ensuite) :
 
 ```bash
-python selection.py         # interface liste + configuration
-python selection_grille.py  # interface grille visuelle
+python configure.py  # interface liste + configuration
+python main.py        # interface grille visuelle
 ```
 
 ## Utilisation
 
-### Interface liste (`selection.py`)
+### Interface liste (`configure.py`)
 
 1. Ouvre l’application.
 2. Clique sur un skin dans la liste de gauche.
@@ -49,7 +49,7 @@ python selection_grille.py  # interface grille visuelle
 4. Clique sur « Appliquer le skin » pour copier le fichier choisi à la racine du projet.
 5. Utilise « Rafraîchir » si tu ajoutes ou supprimes des fichiers dans `skins/` pendant que l’application est ouverte.
 
-### Interface grille (`selection_grille.py`)
+### Interface grille (`main.py`)
 
 1. Ouvre l’application.
 2. Choisis l’onglet « Tous » ou « Favoris », et filtre avec la barre de recherche si besoin.
@@ -60,8 +60,8 @@ python selection_grille.py  # interface grille visuelle
 ## Structure du projet
 
 - `skins_core.py` : logique commune (skins, favoris, tags, options, application du skin) partagée par les deux interfaces.
-- `selection.py` : interface graphique « liste ».
-- `selection_grille.py` : interface graphique « grille visuelle ».
+- `configure.py` : interface graphique « liste ».
+- `main.py` : interface graphique « grille visuelle ».
 - `genreator.py` : génération des aperçus des skins.
 - `skins/` : dossier qui contient les fichiers `.vrm` disponibles.
 - `apercus/` : dossier qui contient les images d’aperçu générées.

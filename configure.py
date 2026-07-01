@@ -10,7 +10,7 @@ l'apperçu doit avoir le nom du skin, une image du skin et la taille du fichier
 """
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 from typing import Optional
 
 
@@ -31,6 +31,7 @@ from skins_core import (
     lister_skins,
     skin_applique_actuel,
     appliquer_skin,
+    renommer_skin,
     correspondre_recherche,
 )
 
@@ -261,6 +262,11 @@ class Application(tk.Tk):
         )
         self.btn_favori.pack(fill="x", pady=(8, 0))
 
+        self.btn_renommer = tk.Button(
+            preview_frame, text="Renommer le skin", command=self.renommer_skin_selectionne
+        )
+        self.btn_renommer.pack(fill="x", pady=(8, 0))
+
         self.status_message = tk.StringVar(value="")
         self.status_label = tk.Label(
             self,
@@ -487,7 +493,40 @@ class Application(tk.Tk):
         except Exception as exc:  # pragma: no cover - interface utilisateur
             messagebox.showerror("Erreur", f"Impossible de changer le favori :\n{exc}")
 
-    
+    def renommer_skin_selectionne(self) -> None:
+        selection = self.listbox.curselection()
+        if not selection:
+            messagebox.showwarning(
+                "Sélection manquante", "Choisis un skin dans la liste."
+            )
+            return
+
+        nom = self.nom_skin_reel(self.listbox.get(selection[0]))
+        skin_path = SKINS_DIR / nom
+        if not skin_path.exists():
+            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            self.rafraichir()
+            return
+
+        nouveau_nom = simpledialog.askstring(
+            "Renommer le skin",
+            "Nouveau nom du skin :",
+            initialvalue=skin_path.stem,
+            parent=self,
+        )
+        if nouveau_nom is None:
+            return
+
+        try:
+            destination = renommer_skin(skin_path, nouveau_nom)
+            self.__favoris = set(recuperer_liste_favoris())
+            self.status_message.set(f"Skin renommé : {nom} → {destination.name}")
+            self.rafraichir(destination)
+        except (ValueError, FileExistsError) as exc:
+            messagebox.showerror("Erreur", str(exc))
+        except Exception as exc:  # pragma: no cover - interface utilisateur
+            messagebox.showerror("Erreur", f"Impossible de renommer le skin :\n{exc}")
+
     def changer_degre(self, degre: int) -> None:
         selection = self.listbox.curselection()
         if not selection:
