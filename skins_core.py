@@ -241,6 +241,18 @@ def lister_tous_les_tags() -> List[str]:
     return sorted(tags)
 
 
+def recuperer_tags_presets() -> List[str]:
+    """Retourne la liste des tags prédéfinis (ajout rapide depuis le menu de configuration)."""
+    return recuperer_options().get("tags_presets", [])
+
+
+def sauvegarder_tags_presets(presets: List[str]) -> None:
+    """Sauvegarde la liste des tags prédéfinis."""
+    options = recuperer_options()
+    options["tags_presets"] = presets
+    sauvegarder_options(options)
+
+
 def recuperer_tags_masques() -> List[str]:
     """Retourne la liste des tags qui masquent les skins qui les portent."""
     return recuperer_options().get("tags_masques", [])

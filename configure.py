@@ -29,6 +29,7 @@ from skins_core import (
     lister_tags,
     sauvegarder_tags,
     lister_skins_visibles,
+    recuperer_tags_presets,
     skin_applique_actuel,
     appliquer_skin,
     renommer_skin,
@@ -233,7 +234,6 @@ class Application(tk.Tk):
             command=lambda: self.ajouter_tags(self.ajouter_tags_entry.get().strip())
         )
         self.btn_ajouter_tags.pack(fill="x", pady=(8, 0))
-
 
         self.preview_image_label = tk.Label(
             preview_frame,
@@ -636,6 +636,31 @@ class Application(tk.Tk):
                 command=lambda t=tag: self.suprimer_tags(t)
             )
             btn.pack(side="left", pady=10, padx=4)
+        bouton_ajouter_tag_preset = tk.Button(
+            self.panel_get_tags,
+            text="+ Tag préréglé",
+            command=self.ouvrir_menu_presets_tags,
+        )
+        bouton_ajouter_tag_preset.pack(side="left", pady=10, padx=4)
+
+    def ouvrir_menu_presets_tags(self) -> None:
+        """Propose les préréglages de tags (définis dans Options) pour ajout rapide."""
+        presets = recuperer_tags_presets()
+        if not presets:
+            messagebox.showinfo(
+                "Aucun préréglage",
+                "Ajoute des préréglages de tags depuis le menu ⚙ Options pour les retrouver ici.",
+            )
+            return
+
+        menu = tk.Menu(self, tearoff=0)
+        for preset in presets:
+            menu.add_command(label=preset, command=lambda p=preset: self.ajouter_tags(p))
+
+        try:
+            menu.tk_popup(self.winfo_pointerx(), self.winfo_pointery())
+        finally:
+            menu.grab_release()
 
 
 def main() -> None:
