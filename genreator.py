@@ -356,10 +356,14 @@ class AvatarPreviewGenerator:
         for root_index in root_nodes:
             walk(root_index, self._identity_matrix())
 
-        # Les modèles VRM font face à -Z (convention VRM 0.x) alors que la caméra
-        # de rendu regarde par défaut depuis +Z : sans ce décalage de 180°, la
-        # rotation "0°" montrerait le dos du personnage au lieu de sa face.
-        rotation_y = math.radians(rotation_degrees + 180.0)
+        # Les modèles VRM 0.x font face à -Z alors que la caméra de rendu regarde
+        # par défaut depuis +Z : sans ce décalage de 180°, la rotation "0°"
+        # montrerait le dos du personnage au lieu de sa face. Le VRM 1.0 a
+        # inversé cette convention (le modèle fait face à +Z), donc les fichiers
+        # utilisant l'extension VRMC_vrm n'ont pas besoin de ce décalage.
+        est_vrm_1_0 = "VRMC_vrm" in gltf.get("extensions", {})
+        decalage_face = 0.0 if est_vrm_1_0 else 180.0
+        rotation_y = math.radians(rotation_degrees + decalage_face)
         rotation_x = math.radians(8.0)
         cos_y = math.cos(rotation_y)
         sin_y = math.sin(rotation_y)
