@@ -24,11 +24,13 @@ from skins_core import (
     SKINS_DIR,
     appliquer_skin,
     correspondre_recherche,
-    lister_skins,
+    lister_skins_visibles,
+    recuperer_interface_demarrage,
     recuperer_liste_favoris,
     sauvegarder_liste_favoris,
     skin_applique_actuel,
 )
+from options_menu import FenetreOptions
 
 CARD_WIDTH = 156
 CARD_HEIGHT = 214
@@ -112,6 +114,19 @@ class ApplicationGrille(tk.Tk):
             fg="#c8e6c9",
         )
         self.current_applied_label.pack(side="right", padx=16, pady=10)
+
+        self.btn_options = tk.Button(
+            entete,
+            text="⚙ Options",
+            command=self.ouvrir_options,
+            bg="#455a64",
+            fg="white",
+            activebackground="#546e7a",
+            activeforeground="white",
+            relief="flat",
+            padx=12,
+        )
+        self.btn_options.pack(side="right", padx=(0, 12), pady=10)
 
     def _construire_onglets(self) -> None:
         barre = tk.Frame(self)
@@ -222,11 +237,14 @@ class ApplicationGrille(tk.Tk):
         self.next_mode = "liste"
         self.destroy()
 
+    def ouvrir_options(self) -> None:
+        FenetreOptions(self, on_close=self.rafraichir)
+
     # ------------------------------------------------------------------
     # Rendu de la grille
     # ------------------------------------------------------------------
     def _skins_filtres(self) -> List[Path]:
-        skins = lister_skins()
+        skins = lister_skins_visibles()
         skins = [s for s in skins if correspondre_recherche(s.name, self.__recherche)]
         if self.__onglet == "favoris":
             skins = [s for s in skins if self.is_skin_favori(s.name)]
@@ -416,7 +434,7 @@ class ApplicationGrille(tk.Tk):
 
 def main() -> None:
     SKINS_DIR.mkdir(exist_ok=True)
-    mode = "grille"
+    mode = recuperer_interface_demarrage()
     while mode:
         if mode == "grille":
             app = ApplicationGrille()

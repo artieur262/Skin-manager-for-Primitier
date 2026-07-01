@@ -28,12 +28,13 @@ from skins_core import (
     sauvegarder_liste_favoris,
     lister_tags,
     sauvegarder_tags,
-    lister_skins,
+    lister_skins_visibles,
     skin_applique_actuel,
     appliquer_skin,
     renommer_skin,
     correspondre_recherche,
 )
+from options_menu import FenetreOptions
 
 
 def afficher_apercu_skin(skin_path: Path) -> bool:
@@ -147,6 +148,11 @@ class Application(tk.Tk):
             self.up_panel, text="Vue grille ▦", command=self.passer_en_vue_grille
         )
         self.btn_vue_grille.pack(side="right", padx=(10, 0), pady=10)
+
+        self.btn_options = tk.Button(
+            self.up_panel, text="⚙ Options", command=self.ouvrir_options
+        )
+        self.btn_options.pack(side="right", padx=(10, 0), pady=10)
 
         self.current_applied_label = tk.Label(
             self.up_panel,
@@ -340,6 +346,9 @@ class Application(tk.Tk):
         self.next_mode = "grille"
         self.destroy()
 
+    def ouvrir_options(self) -> None:
+        FenetreOptions(self, on_close=self.rafraichir)
+
     def nom_skin_affiche(self, skin: Path, skin_applique: Optional[Path]) -> str:
         name = ("♥ " if self.is_skin_favori(skin.name) else "") + skin.name
         if skin_applique is not None and skin.name == skin_applique.name:
@@ -393,7 +402,7 @@ class Application(tk.Tk):
     def rafraichir(self, skin_selected:str=None) -> None:
         
         self.listbox.delete(0, tk.END)
-        skins = lister_skins()
+        skins = lister_skins_visibles()
         skin_applique = skin_applique_actuel()
 
         if not skins:

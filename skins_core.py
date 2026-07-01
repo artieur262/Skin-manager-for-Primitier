@@ -226,3 +226,61 @@ def correspondre_recherche(skin_name: str, recherche: str) -> bool:
         tags = lister_tags(skin_name)
         return tag_recherche in tags
     return recherche in skin_name.lower()
+
+
+def lister_tous_les_tags() -> List[str]:
+    """Retourne la liste de tous les tags utilisés par au moins un skin."""
+    TAGS_DIR.mkdir(exist_ok=True)
+    tags = set()
+    for fichier in TAGS_DIR.glob("*.json"):
+        try:
+            with open(fichier, "r", encoding="utf-8") as f:
+                tags.update(json.load(f))
+        except Exception:
+            continue
+    return sorted(tags)
+
+
+def recuperer_tags_masques() -> List[str]:
+    """Retourne la liste des tags qui masquent les skins qui les portent."""
+    return recuperer_options().get("tags_masques", [])
+
+
+def sauvegarder_tags_masques(tags: List[str]) -> None:
+    """Sauvegarde la liste des tags qui masquent les skins qui les portent."""
+    options = recuperer_options()
+    options["tags_masques"] = tags
+    sauvegarder_options(options)
+
+
+def skin_est_masque(skin_name: str, tags_masques: Optional[List[str]] = None) -> bool:
+    """Vérifie si un skin doit être masqué car il porte un tag masquant."""
+    if tags_masques is None:
+        tags_masques = recuperer_tags_masques()
+    if not tags_masques:
+        return False
+    return any(tag in tags_masques for tag in lister_tags(skin_name))
+
+
+def lister_skins_visibles() -> List[Path]:
+    """Retourne les skins disponibles, sans ceux masqués par un tag masquant.
+
+    Les skins masqués restent utilisables (skin appliqué, renommage...) mais
+    n'apparaissent plus dans les listes/grilles de navigation habituelles.
+    Seul le menu des options permet de savoir quels tags masquent des skins.
+    """
+    tags_masques = recuperer_tags_masques()
+    return [s for s in lister_skins() if not skin_est_masque(s.name, tags_masques)]
+
+
+def recuperer_interface_demarrage() -> str:
+    """Retourne l'interface à afficher au démarrage de main.py ('grille' ou 'liste')."""
+    valeur = recuperer_options().get("interface_demarrage", "grille")
+    return valeur if valeur in ("grille", "liste") else "grille"
+
+
+def sauvegarder_interface_demarrage(interface: str) -> None:
+    """Sauvegarde l'interface à afficher au démarrage de main.py."""
+    options = recuperer_options()
+    options["interface_demarrage"] = interface
+    sauvegarder_options(options)
