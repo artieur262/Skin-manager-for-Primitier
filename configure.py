@@ -178,9 +178,19 @@ class Application(tk.Tk):
         )
         self.recherche_bouton.pack(fill="x", pady=(0, 8))
 
-        self.listbox = tk.Listbox(liste_frame, activestyle="dotbox")
-        self.listbox.pack(fill="both", expand=True)
+        listbox_frame = tk.Frame(liste_frame)
+        listbox_frame.pack(fill="both", expand=True)
+
+        self.listbox_scrollbar = tk.Scrollbar(listbox_frame, orient="vertical")
+        self.listbox_scrollbar.pack(side="right", fill="y")
+
+        self.listbox = tk.Listbox(
+            listbox_frame, activestyle="dotbox", yscrollcommand=self.listbox_scrollbar.set
+        )
+        self.listbox.pack(side="left", fill="both", expand=True)
         self.listbox.bind("<<ListboxSelect>>", self.on_skin_selected)
+
+        self.listbox_scrollbar.config(command=self.listbox.yview)
 
         preview_frame = tk.LabelFrame(contenu, text="Prévisualisation", padx=12, pady=12)
         preview_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
@@ -664,6 +674,7 @@ class Application(tk.Tk):
 
 
 def main() -> None:
+    
     SKINS_DIR.mkdir(exist_ok=True)
     mode = "liste"
     while mode:
