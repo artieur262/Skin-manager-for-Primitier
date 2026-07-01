@@ -4,6 +4,7 @@ venv/
 options/
 tags/
 __pycache__/
+output/
 *.vrm
 test.png
 __pycache__/genreator.cpython-36.pyc
