@@ -352,7 +352,10 @@ class AvatarPreviewGenerator:
         for root_index in root_nodes:
             walk(root_index, self._identity_matrix())
 
-        rotation_y = math.radians(rotation_degrees)
+        # Les modèles VRM font face à -Z (convention VRM 0.x) alors que la caméra
+        # de rendu regarde par défaut depuis +Z : sans ce décalage de 180°, la
+        # rotation "0°" montrerait le dos du personnage au lieu de sa face.
+        rotation_y = math.radians(rotation_degrees + 180.0)
         rotation_x = math.radians(8.0)
         cos_y = math.cos(rotation_y)
         sin_y = math.sin(rotation_y)
@@ -404,8 +407,10 @@ class AvatarPreviewGenerator:
                 material_index = primitive.get("material")
                 texture = None
                 base_color = (210, 210, 210, 255)
+                double_sided = True
                 if material_index is not None and material_index < len(materials):
                     material = materials[material_index]
+                    double_sided = bool(material.get("doubleSided", False))
                     base_color_factor = material.get("pbrMetallicRoughness", {}).get("baseColorFactor")
                     if base_color_factor and len(base_color_factor) >= 3:
                         red = int(max(0.0, min(1.0, base_color_factor[0])) * 255)
@@ -463,6 +468,13 @@ class AvatarPreviewGenerator:
                     ) * (transformed[2][0] - transformed[0][0])
                     normal_length = math.sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z) or 1.0
                     normal_z /= normal_length
+
+                    if not double_sided and normal_z < 0:
+                        # Triangle tourné dos à la caméra : sans ça, les faces internes
+                        # d'un mesh (ex. l'intérieur d'une aile fine) peuvent se dessiner
+                        # par-dessus les faces visibles à cause du tri approximatif par
+                        # profondeur, rendant l'aperçu illisible.
+                        continue
 
                     light_factor = 0.58 + max(-0.18, min(0.35, normal_z * 0.28))
                     if uvs and texture is not None:
