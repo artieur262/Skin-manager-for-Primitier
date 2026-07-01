@@ -293,8 +293,12 @@ class AvatarPreviewGenerator:
 
         u = u % 1.0
         v = v % 1.0
+        # glTF place l'origine UV (0,0) en haut à gauche de l'image (v croît vers
+        # le bas), donc v se mappe directement sur la ligne de pixels : un flip
+        # ici faisait échantillonner la mauvaise moitié des textures en atlas
+        # (ex. Ultra kill.vrm), donnant des couleurs sans rapport avec le modèle.
         x = min(width - 1, max(0, int(u * (width - 1) + 0.5)))
-        y = min(height - 1, max(0, int((1.0 - v) * (height - 1) + 0.5)))
+        y = min(height - 1, max(0, int(v * (height - 1) + 0.5)))
         return texture.getpixel((x, y))
 
     def _mix_color(self, color, factor):
@@ -308,6 +312,13 @@ class AvatarPreviewGenerator:
 
     def _render_preview_image(self, skin_path, output_path, rotation_degrees=0.0, force=False):
         """Rend un aperçu du VRM avec une rotation autour de l'axe vertical."""
+        # Le cache de textures est ré-indexé par id(bin_chunk), qui peut être
+        # réutilisé par Python pour un tout autre fichier une fois l'ancien
+        # bin_chunk libéré (ce générateur est une instance partagée entre tous
+        # les skins). Sans ce vidage, un skin peut hériter des textures d'un
+        # skin précédent et se retrouver avec des couleurs complètement fausses.
+        self._texture_cache.clear()
+
         gltf, bin_chunk = self._load_glb(skin_path)
         if not gltf or not bin_chunk:
             img = Image.new("RGB", (900, 1200), color="white")
@@ -352,7 +363,14 @@ class AvatarPreviewGenerator:
         for root_index in root_nodes:
             walk(root_index, self._identity_matrix())
 
-        rotation_y = math.radians(rotation_degrees)
+        # Les modèles VRM 0.x font face à -Z alors que la caméra de rendu regarde
+        # par défaut depuis +Z : sans ce décalage de 180°, la rotation "0°"
+        # montrerait le dos du personnage au lieu de sa face. Le VRM 1.0 a
+        # inversé cette convention (le modèle fait face à +Z), donc les fichiers
+        # utilisant l'extension VRMC_vrm n'ont pas besoin de ce décalage.
+        est_vrm_1_0 = "VRMC_vrm" in gltf.get("extensions", {})
+        decalage_face = 0.0 if est_vrm_1_0 else 180.0
+        rotation_y = math.radians(rotation_degrees + decalage_face)
         rotation_x = math.radians(8.0)
         cos_y = math.cos(rotation_y)
         sin_y = math.sin(rotation_y)
@@ -404,8 +422,14 @@ class AvatarPreviewGenerator:
                 material_index = primitive.get("material")
                 texture = None
                 base_color = (210, 210, 210, 255)
+                double_sided = True
+                alpha_mode = "OPAQUE"
+                alpha_cutoff = 0.5
                 if material_index is not None and material_index < len(materials):
                     material = materials[material_index]
+                    double_sided = bool(material.get("doubleSided", False))
+                    alpha_mode = material.get("alphaMode", "OPAQUE")
+                    alpha_cutoff = material.get("alphaCutoff", 0.5)
                     base_color_factor = material.get("pbrMetallicRoughness", {}).get("baseColorFactor")
                     if base_color_factor and len(base_color_factor) >= 3:
                         red = int(max(0.0, min(1.0, base_color_factor[0])) * 255)
@@ -416,6 +440,26 @@ class AvatarPreviewGenerator:
 
                     texture_info = material.get("pbrMetallicRoughness", {}).get("baseColorTexture", {})
                     texture = self._load_texture(gltf, bin_chunk, texture_info.get("index"))
+
+                    # Certains exports (notamment convertis depuis MMD, cf. le
+                    # champ extras.mmd_material) n'ont aucune couleur exploitable
+                    # dans le canal base color (pas de texture, facteur à 0) : la
+                    # vraie couleur se trouve alors dans le canal émissif. Sans ce
+                    # repli, le modèle se rendrait entièrement en noir.
+                    base_color_degenere = not base_color_factor or max(base_color_factor[:3]) < 0.05
+                    if texture is None and base_color_degenere:
+                        emissive_info = material.get("emissiveTexture")
+                        if emissive_info:
+                            texture = self._load_texture(gltf, bin_chunk, emissive_info.get("index"))
+                        if texture is None:
+                            emissive_factor = material.get("emissiveFactor")
+                            if emissive_factor and max(emissive_factor) > 0:
+                                base_color = (
+                                    int(max(0.0, min(1.0, emissive_factor[0])) * 255),
+                                    int(max(0.0, min(1.0, emissive_factor[1])) * 255),
+                                    int(max(0.0, min(1.0, emissive_factor[2])) * 255),
+                                    255,
+                                )
 
                 for tri_start in range(0, len(indices) - 2, 3):
                     vertex_indices = indices[tri_start : tri_start + 3]
@@ -464,6 +508,13 @@ class AvatarPreviewGenerator:
                     normal_length = math.sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z) or 1.0
                     normal_z /= normal_length
 
+                    if not double_sided and normal_z < 0:
+                        # Triangle tourné dos à la caméra : sans ça, les faces internes
+                        # d'un mesh (ex. l'intérieur d'une aile fine) peuvent se dessiner
+                        # par-dessus les faces visibles à cause du tri approximatif par
+                        # profondeur, rendant l'aperçu illisible.
+                        continue
+
                     light_factor = 0.58 + max(-0.18, min(0.35, normal_z * 0.28))
                     if uvs and texture is not None:
                         centroid_u = sum(uv[0] for uv in uvs) / len(uvs)
@@ -473,8 +524,19 @@ class AvatarPreviewGenerator:
                     else:
                         color = self._mix_color(base_color, light_factor)
 
+                    # Ce rasteriseur peint chaque triangle en une seule couleur opaque
+                    # (pas de vrai fondu alpha par pixel) : sur les matériaux
+                    # "cutout" (alphaMode MASK/BLEND, ex. un halo/anneau décoratif
+                    # sur fond transparent), les zones transparentes ont souvent un
+                    # RVB noir non défini sous alpha=0. Sans ce test, PIL redessine
+                    # ce noir en opaque et un accessoire censé être quasi invisible
+                    # apparaît comme une grande plaque noire sur la tête (ex.
+                    # ミヤコ（通常）.vrm).
+                    if alpha_mode in ("MASK", "BLEND") and color[3] < alpha_cutoff * 255:
+                        continue
+
                     depth = sum(triangle_depths) / 3.0
-                    render_triangles.append((depth, projected, color))
+                    render_triangles.append((depth, projected, (color[0], color[1], color[2], 255)))
 
         render_scale = 2
         canvas = Image.new("RGBA", (900 * render_scale, 1200 * render_scale), (248, 248, 248, 255))
@@ -599,6 +661,36 @@ class AvatarPreviewGenerator:
         alpha = warped.getchannel("A")
         warped.putalpha(ImageChops.multiply(alpha, triangle_mask))
         canvas.alpha_composite(warped, (min_x, min_y))
+
+    def read_vrm_meta(self, skin_path):
+        """Retourne les métadonnées VRM du fichier, normalisées avec un champ "title".
+
+        Gère à la fois le VRM 0.x (extensions.VRM.meta.title) et le VRM 1.0
+        (extensions.VRMC_vrm.meta.name) : sans ça, les fichiers VRM 1.0 (de
+        plus en plus courants sur hub.vroid.com) ressortaient sans aucune
+        métadonnée exploitable.
+        """
+        gltf, _ = self._load_glb(Path(skin_path))
+        if not gltf:
+            return {}
+        extensions = gltf.get("extensions", {})
+
+        vrm0_extension = extensions.get("VRM", {})
+        meta0 = vrm0_extension.get("meta", {}) if isinstance(vrm0_extension, dict) else {}
+        if isinstance(meta0, dict) and meta0.get("title"):
+            return meta0
+
+        vrm1_extension = extensions.get("VRMC_vrm", {})
+        meta1 = vrm1_extension.get("meta", {}) if isinstance(vrm1_extension, dict) else {}
+        if isinstance(meta1, dict) and meta1.get("name"):
+            meta_normalisee = dict(meta1)
+            meta_normalisee.setdefault("title", meta1.get("name"))
+            auteurs = meta1.get("authors")
+            if auteurs:
+                meta_normalisee.setdefault("author", ", ".join(auteurs))
+            return meta_normalisee
+
+        return meta0 if isinstance(meta0, dict) else {}
 
     def create_preview_image(self, skin_path, output_path):
         self._render_preview_image(skin_path, output_path, rotation_degrees=0.0)
