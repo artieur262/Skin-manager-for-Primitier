@@ -72,6 +72,7 @@ class ApplicationGrille(tk.Tk):
         self._derniere_largeur_colonnes: int = -1
         self._file_generation_apercus: List[Path] = []
         self._generation_apercus_en_cours: bool = False
+        self._redimensionnement_apres_id: Optional[str] = None
 
         self.title("Gestionnaire de skins VRM — Vue grille")
         self.geometry("1065x700")
@@ -266,9 +267,52 @@ class ApplicationGrille(tk.Tk):
     def _on_canvas_resize(self, event: tk.Event) -> None:
         self.canvas.itemconfig(self.grid_window, width=event.width)
         colonnes = max(1, event.width // (CARD_WIDTH + GRID_PADDING))
-        if colonnes != self._derniere_largeur_colonnes:
-            self._derniere_largeur_colonnes = colonnes
+        if colonnes == self._derniere_largeur_colonnes:
+            return
+
+        # Glisser un bord de fenêtre déclenche une rafale d'événements <Configure>
+        # (plusieurs par seconde). Reconstruire toute la grille à chacun d'eux
+        # (destruction/recréation de toutes les cartes) rendait le
+        # redimensionnement très saccadé : on attend une accalmie avant de
+        # reconstruire, une seule fois par geste de redimensionnement.
+        if self._redimensionnement_apres_id is not None:
+            self.after_cancel(self._redimensionnement_apres_id)
+        self._redimensionnement_apres_id = self.after(
+            120, lambda c=colonnes: self._appliquer_redimensionnement(c)
+        )
+
+    def _appliquer_redimensionnement(self, colonnes: int) -> None:
+        self._redimensionnement_apres_id = None
+        self._derniere_largeur_colonnes = colonnes
+        self._regriller_cartes(colonnes)
+
+    def _regriller_cartes(self, colonnes: int) -> None:
+        """Repositionne les cartes déjà construites sur la nouvelle grille de
+        colonnes, sans les détruire/recréer.
+
+        Un redimensionnement ne change ni la recherche ni le contenu affiché,
+        donc un rafraichir() complet (destruction/recréation de toutes les
+        cartes) est un travail inutilement lourd qui peut encore bloquer assez
+        longtemps la boucle d'événements pour perturber le redimensionnement
+        interactif de la fenêtre (Windows peut alors la faire revenir à sa
+        taille précédente). Un simple repositionnement est quasi instantané.
+        """
+        skins = self._skins_filtres()
+        if not skins or not self.cartes:
             self.rafraichir(conserver_selection=True)
+            return
+
+        for index, skin in enumerate(skins):
+            carte = self.cartes.get(skin.name)
+            if carte is None:
+                # Le contenu affiché a changé entre-temps (cas improbable pour
+                # un simple redimensionnement) : on retombe sur le rebuild complet.
+                self.rafraichir(conserver_selection=True)
+                return
+            ligne, colonne = divmod(index, colonnes)
+            carte.cadre.grid(row=ligne, column=colonne, padx=GRID_PADDING // 2, pady=GRID_PADDING // 2)
+
+        self.canvas.after(1, lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
     def _on_molette(self, event: tk.Event) -> None:
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
@@ -277,7 +321,10 @@ class ApplicationGrille(tk.Tk):
         for widget in self.grid_frame.winfo_children():
             widget.destroy()
         self.cartes.clear()
-        self.images_cache.clear()
+        # Le cache de vignettes (self.images_cache) n'est volontairement pas vidé
+        # ici : il persiste entre deux reconstructions de la grille (recherche,
+        # redimensionnement...) pour éviter de redécoder chaque PNG depuis le
+        # disque à chaque fois, ce qui était la principale source de lenteur.
 
         skins = self._skins_filtres()
         skin_applique = skin_applique_actuel()
@@ -361,6 +408,11 @@ class ApplicationGrille(tk.Tk):
             self._mettre_en_valeur_carte(skin.name, True)
 
     def _charger_vignette(self, skin: Path, image_label: tk.Label) -> None:
+        photo_en_cache = self.images_cache.get(skin.name)
+        if photo_en_cache is not None:
+            image_label.config(image=photo_en_cache, text="")
+            return
+
         preview_path = APERCU_DIR / skin.with_suffix(".png").name
         if not preview_path.exists():
             # On ne génère surtout pas l'aperçu manquant ici : cette méthode est
