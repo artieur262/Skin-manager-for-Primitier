@@ -27,6 +27,8 @@ from skins_core import (
     lister_skins_visibles,
     recuperer_interface_demarrage,
     recuperer_liste_favoris,
+    recuperer_verrouillage_configuration_main,
+    recuperer_verrouillage_options_main,
     sauvegarder_liste_favoris,
     skin_applique_actuel,
 )
@@ -86,14 +88,17 @@ class ApplicationGrille(tk.Tk):
         entete = tk.Frame(self, bg="#37474f")
         entete.pack(fill="x")
 
+        configuration_verrouillee = recuperer_verrouillage_configuration_main()
         self.btn_vue_liste = tk.Button(
             entete,
-            text="☰ Vue liste",
+            text="☰ Vue liste (verrouillé)" if configuration_verrouillee else "☰ Vue liste",
             command=self.passer_en_vue_liste,
+            state="disabled" if configuration_verrouillee else "normal",
             bg="#455a64",
             fg="white",
             activebackground="#546e7a",
             activeforeground="white",
+            disabledforeground="#90a4ae",
             relief="flat",
             padx=12,
         )
@@ -115,14 +120,17 @@ class ApplicationGrille(tk.Tk):
         )
         self.current_applied_label.pack(side="right", padx=16, pady=10)
 
+        options_verrouillees = recuperer_verrouillage_options_main()
         self.btn_options = tk.Button(
             entete,
-            text="⚙ Options",
+            text="⚙ Options (verrouillé)" if options_verrouillees else "⚙ Options",
             command=self.ouvrir_options,
+            state="disabled" if options_verrouillees else "normal",
             bg="#455a64",
             fg="white",
             activebackground="#546e7a",
             activeforeground="white",
+            disabledforeground="#90a4ae",
             relief="flat",
             padx=12,
         )

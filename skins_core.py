@@ -296,3 +296,27 @@ def sauvegarder_interface_demarrage(interface: str) -> None:
     options = recuperer_options()
     options["interface_demarrage"] = interface
     sauvegarder_options(options)
+
+
+def recuperer_verrouillage_options_main() -> bool:
+    """Indique si l'accès au menu des options est bloqué depuis main.py."""
+    return bool(recuperer_options().get("verrouiller_options_main", False))
+
+
+def sauvegarder_verrouillage_options_main(verrouille: bool) -> None:
+    """Bloque/débloque l'accès au menu des options depuis main.py."""
+    options = recuperer_options()
+    options["verrouiller_options_main"] = verrouille
+    sauvegarder_options(options)
+
+
+def recuperer_verrouillage_configuration_main() -> bool:
+    """Indique si l'accès à la vue liste (configuration) est bloqué depuis main.py."""
+    return bool(recuperer_options().get("verrouiller_configuration_main", False))
+
+
+def sauvegarder_verrouillage_configuration_main(verrouille: bool) -> None:
+    """Bloque/débloque l'accès à la vue liste (configuration) depuis main.py."""
+    options = recuperer_options()
+    options["verrouiller_configuration_main"] = verrouille
+    sauvegarder_options(options)

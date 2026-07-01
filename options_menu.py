@@ -18,9 +18,13 @@ from skins_core import (
     recuperer_interface_demarrage,
     recuperer_tags_masques,
     recuperer_tags_presets,
+    recuperer_verrouillage_configuration_main,
+    recuperer_verrouillage_options_main,
     sauvegarder_interface_demarrage,
     sauvegarder_tags_masques,
     sauvegarder_tags_presets,
+    sauvegarder_verrouillage_configuration_main,
+    sauvegarder_verrouillage_options_main,
 )
 
 
@@ -28,8 +32,8 @@ class FenetreOptions(tk.Toplevel):
     def __init__(self, parent: tk.Tk, on_close=None) -> None:
         super().__init__(parent)
         self.title("Options")
-        self.geometry("420x680")
-        self.minsize(360, 520)
+        self.geometry("440x780")
+        self.minsize(380, 560)
         self.transient(parent)
         self.grab_set()
 
@@ -37,6 +41,7 @@ class FenetreOptions(tk.Toplevel):
         self.variables_tags: Dict[str, tk.BooleanVar] = {}
 
         self._construire_interface_demarrage()
+        self._construire_verrouillage_main()
         self._construire_tags_presets()
         self._construire_tags_masquants()
         self._construire_bas()
@@ -66,6 +71,39 @@ class FenetreOptions(tk.Toplevel):
 
     def _changer_interface_demarrage(self) -> None:
         sauvegarder_interface_demarrage(self.interface_var.get())
+
+    # ------------------------------------------------------------------
+    def _construire_verrouillage_main(self) -> None:
+        cadre = tk.LabelFrame(self, text="Verrouillage depuis main.py", padx=10, pady=10)
+        cadre.pack(fill="x", padx=12, pady=6)
+
+        tk.Label(
+            cadre,
+            text="Une fois bloqué, seul configure.py permet de débloquer l'accès.",
+            justify="left",
+            fg="gray",
+            wraplength=320,
+        ).pack(anchor="w", pady=(0, 6))
+
+        self.verrouiller_options_var = tk.BooleanVar(value=recuperer_verrouillage_options_main())
+        tk.Checkbutton(
+            cadre,
+            text="Bloquer l'accès au menu des options depuis main.py",
+            variable=self.verrouiller_options_var,
+            command=lambda: sauvegarder_verrouillage_options_main(self.verrouiller_options_var.get()),
+        ).pack(anchor="w")
+
+        self.verrouiller_configuration_var = tk.BooleanVar(
+            value=recuperer_verrouillage_configuration_main()
+        )
+        tk.Checkbutton(
+            cadre,
+            text="Bloquer l'accès à la configuration (vue liste) depuis main.py",
+            variable=self.verrouiller_configuration_var,
+            command=lambda: sauvegarder_verrouillage_configuration_main(
+                self.verrouiller_configuration_var.get()
+            ),
+        ).pack(anchor="w")
 
     # ------------------------------------------------------------------
     def _construire_tags_presets(self) -> None:
