@@ -430,6 +430,26 @@ class AvatarPreviewGenerator:
                     texture_info = material.get("pbrMetallicRoughness", {}).get("baseColorTexture", {})
                     texture = self._load_texture(gltf, bin_chunk, texture_info.get("index"))
 
+                    # Certains exports (notamment convertis depuis MMD, cf. le
+                    # champ extras.mmd_material) n'ont aucune couleur exploitable
+                    # dans le canal base color (pas de texture, facteur à 0) : la
+                    # vraie couleur se trouve alors dans le canal émissif. Sans ce
+                    # repli, le modèle se rendrait entièrement en noir.
+                    base_color_degenere = not base_color_factor or max(base_color_factor[:3]) < 0.05
+                    if texture is None and base_color_degenere:
+                        emissive_info = material.get("emissiveTexture")
+                        if emissive_info:
+                            texture = self._load_texture(gltf, bin_chunk, emissive_info.get("index"))
+                        if texture is None:
+                            emissive_factor = material.get("emissiveFactor")
+                            if emissive_factor and max(emissive_factor) > 0:
+                                base_color = (
+                                    int(max(0.0, min(1.0, emissive_factor[0])) * 255),
+                                    int(max(0.0, min(1.0, emissive_factor[1])) * 255),
+                                    int(max(0.0, min(1.0, emissive_factor[2])) * 255),
+                                    255,
+                                )
+
                 for tri_start in range(0, len(indices) - 2, 3):
                     vertex_indices = indices[tri_start : tri_start + 3]
                     if len(vertex_indices) < 3:
