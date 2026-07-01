@@ -423,9 +423,13 @@ class AvatarPreviewGenerator:
                 texture = None
                 base_color = (210, 210, 210, 255)
                 double_sided = True
+                alpha_mode = "OPAQUE"
+                alpha_cutoff = 0.5
                 if material_index is not None and material_index < len(materials):
                     material = materials[material_index]
                     double_sided = bool(material.get("doubleSided", False))
+                    alpha_mode = material.get("alphaMode", "OPAQUE")
+                    alpha_cutoff = material.get("alphaCutoff", 0.5)
                     base_color_factor = material.get("pbrMetallicRoughness", {}).get("baseColorFactor")
                     if base_color_factor and len(base_color_factor) >= 3:
                         red = int(max(0.0, min(1.0, base_color_factor[0])) * 255)
@@ -520,8 +524,19 @@ class AvatarPreviewGenerator:
                     else:
                         color = self._mix_color(base_color, light_factor)
 
+                    # Ce rasteriseur peint chaque triangle en une seule couleur opaque
+                    # (pas de vrai fondu alpha par pixel) : sur les matériaux
+                    # "cutout" (alphaMode MASK/BLEND, ex. un halo/anneau décoratif
+                    # sur fond transparent), les zones transparentes ont souvent un
+                    # RVB noir non défini sous alpha=0. Sans ce test, PIL redessine
+                    # ce noir en opaque et un accessoire censé être quasi invisible
+                    # apparaît comme une grande plaque noire sur la tête (ex.
+                    # ミヤコ（通常）.vrm).
+                    if alpha_mode in ("MASK", "BLEND") and color[3] < alpha_cutoff * 255:
+                        continue
+
                     depth = sum(triangle_depths) / 3.0
-                    render_triangles.append((depth, projected, color))
+                    render_triangles.append((depth, projected, (color[0], color[1], color[2], 255)))
 
         render_scale = 2
         canvas = Image.new("RGBA", (900 * render_scale, 1200 * render_scale), (248, 248, 248, 255))
