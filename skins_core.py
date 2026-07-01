@@ -293,28 +293,70 @@ def lister_tous_les_tags() -> List[str]:
     return sorted(tags)
 
 
+def _recuperer_fichier_tags() -> dict:
+    """Récupère les réglages de tags (préréglages et masquants) depuis options/tags.json.
+
+    Ces deux réglages vivaient auparavant dans options.json : s'ils y sont
+    encore présents (fichier créé avant cette séparation), on les rapatrie
+    ici une bonne fois pour toutes puis on les retire d'options.json, pour
+    ne pas perdre les réglages déjà faits par l'utilisateur.
+    """
+    OPTIONS_DIR.mkdir(exist_ok=True)
+    tags_file = OPTIONS_DIR / "tags.json"
+    if not tags_file.exists():
+        options = recuperer_options()
+        donnees = {}
+        a_migrer = False
+        for cle in ("tags_masques", "tags_presets"):
+            if cle in options:
+                donnees[cle] = options.pop(cle)
+                a_migrer = True
+        if a_migrer:
+            sauvegarder_options(options)
+        donnees.setdefault("tags_masques", [])
+        donnees.setdefault("tags_presets", [])
+        _sauvegarder_fichier_tags(donnees)
+        return donnees
+    try:
+        with open(tags_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"tags_masques": [], "tags_presets": []}
+
+
+def _sauvegarder_fichier_tags(donnees: dict) -> None:
+    """Sauvegarde les réglages de tags (préréglages et masquants) dans options/tags.json."""
+    OPTIONS_DIR.mkdir(exist_ok=True)
+    tags_file = OPTIONS_DIR / "tags.json"
+    try:
+        with open(tags_file, "w", encoding="utf-8") as f:
+            json.dump(donnees, f, indent=4)
+    except Exception:
+        pass
+
+
 def recuperer_tags_presets() -> List[str]:
     """Retourne la liste des tags prédéfinis (ajout rapide depuis le menu de configuration)."""
-    return recuperer_options().get("tags_presets", [])
+    return _recuperer_fichier_tags().get("tags_presets", [])
 
 
 def sauvegarder_tags_presets(presets: List[str]) -> None:
     """Sauvegarde la liste des tags prédéfinis."""
-    options = recuperer_options()
-    options["tags_presets"] = presets
-    sauvegarder_options(options)
+    donnees = _recuperer_fichier_tags()
+    donnees["tags_presets"] = presets
+    _sauvegarder_fichier_tags(donnees)
 
 
 def recuperer_tags_masques() -> List[str]:
     """Retourne la liste des tags qui masquent les skins qui les portent."""
-    return recuperer_options().get("tags_masques", [])
+    return _recuperer_fichier_tags().get("tags_masques", [])
 
 
 def sauvegarder_tags_masques(tags: List[str]) -> None:
     """Sauvegarde la liste des tags qui masquent les skins qui les portent."""
-    options = recuperer_options()
-    options["tags_masques"] = tags
-    sauvegarder_options(options)
+    donnees = _recuperer_fichier_tags()
+    donnees["tags_masques"] = tags
+    _sauvegarder_fichier_tags(donnees)
 
 
 def skin_est_masque(skin_name: str, tags_masques: Optional[List[str]] = None) -> bool:
