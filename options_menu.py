@@ -14,12 +14,14 @@ from typing import Dict
 from skins_core import (
     lister_tous_les_tags,
     recuperer_interface_demarrage,
+    recuperer_plein_ecran_demarrage,
     recuperer_tags_masques,
     recuperer_tags_presets,
     recuperer_verrouillage_configuration_main,
     recuperer_verrouillage_options_main,
     renommer_avatars_vroid_hub,
     sauvegarder_interface_demarrage,
+    sauvegarder_plein_ecran_demarrage,
     sauvegarder_tags_masques,
     sauvegarder_tags_presets,
     sauvegarder_verrouillage_configuration_main,
@@ -78,6 +80,14 @@ class FenetreOptions(tk.Toplevel):
             value="liste",
             command=self._changer_interface_demarrage,
         ).pack(anchor="w")
+
+        self.plein_ecran_var = tk.BooleanVar(value=recuperer_plein_ecran_demarrage())
+        tk.Checkbutton(
+            cadre,
+            text="Démarrer en plein écran (fenêtre maximisée)",
+            variable=self.plein_ecran_var,
+            command=lambda: sauvegarder_plein_ecran_demarrage(self.plein_ecran_var.get()),
+        ).pack(anchor="w", pady=(6, 0))
 
     def _changer_interface_demarrage(self) -> None:
         sauvegarder_interface_demarrage(self.interface_var.get())

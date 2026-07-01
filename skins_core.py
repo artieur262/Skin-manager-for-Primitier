@@ -362,6 +362,18 @@ def sauvegarder_verrouillage_options_main(verrouille: bool) -> None:
     sauvegarder_options(options)
 
 
+def recuperer_plein_ecran_demarrage() -> bool:
+    """Indique si main.py doit démarrer en fenêtre maximisée (plein écran)."""
+    return bool(recuperer_options().get("plein_ecran_demarrage", False))
+
+
+def sauvegarder_plein_ecran_demarrage(plein_ecran: bool) -> None:
+    """Sauvegarde si main.py doit démarrer en fenêtre maximisée (plein écran)."""
+    options = recuperer_options()
+    options["plein_ecran_demarrage"] = plein_ecran
+    sauvegarder_options(options)
+
+
 def recuperer_verrouillage_configuration_main() -> bool:
     """Indique si l'accès à la vue liste (configuration) est bloqué depuis main.py."""
     return bool(recuperer_options().get("verrouiller_configuration_main", False))

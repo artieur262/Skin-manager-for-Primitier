@@ -27,6 +27,7 @@ from skins_core import (
     lister_skins_visibles,
     recuperer_interface_demarrage,
     recuperer_liste_favoris,
+    recuperer_plein_ecran_demarrage,
     recuperer_verrouillage_configuration_main,
     recuperer_verrouillage_options_main,
     sauvegarder_liste_favoris,
@@ -69,10 +70,14 @@ class ApplicationGrille(tk.Tk):
         self.images_cache: Dict[str, ImageTk.PhotoImage] = {}
         self.cartes: Dict[str, CarteSkin] = {}
         self._derniere_largeur_colonnes: int = -1
+        self._file_generation_apercus: List[Path] = []
+        self._generation_apercus_en_cours: bool = False
 
         self.title("Gestionnaire de skins VRM — Vue grille")
-        self.geometry("1040x700")
-        self.minsize(760, 560)
+        self.geometry("1065x700")
+        self.minsize(785, 560)
+        if recuperer_plein_ecran_demarrage():
+            self.state("zoomed")
 
         self._construire_entete()
         self._construire_onglets()
@@ -165,7 +170,7 @@ class ApplicationGrille(tk.Tk):
         conteneur.pack(fill="both", expand=True, padx=12, pady=8)
 
         self.canvas = tk.Canvas(conteneur, bg="#e0e0e0", highlightthickness=0)
-        scrollbar = tk.Scrollbar(conteneur, orient="vertical", command=self.canvas.yview)
+        scrollbar = tk.Scrollbar(conteneur, orient="vertical", width=28, command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=scrollbar.set)
         scrollbar.pack(side="right", fill="y")
         self.canvas.pack(side="left", fill="both", expand=True)
@@ -358,21 +363,56 @@ class ApplicationGrille(tk.Tk):
     def _charger_vignette(self, skin: Path, image_label: tk.Label) -> None:
         preview_path = APERCU_DIR / skin.with_suffix(".png").name
         if not preview_path.exists():
+            # On ne génère surtout pas l'aperçu manquant ici : cette méthode est
+            # appelée pendant la construction de la grille, donc génération
+            # synchrone = fenêtre invisible/figée tant que tous les aperçus
+            # manquants n'ont pas fini de se générer (long au premier lancement).
+            # On affiche un espace réservé et on reporte la génération après
+            # l'affichage, une vignette à la fois.
+            image_label.config(image="", text="Génération...", fg="gray")
+            self._mettre_en_file_generation(skin)
+            return
+
+        self._afficher_vignette_depuis_fichier(skin, preview_path, image_label)
+
+    def _afficher_vignette_depuis_fichier(self, skin: Path, preview_path: Path, image_label: tk.Label) -> None:
+        try:
+            with Image.open(preview_path) as source:
+                vignette = source.copy()
+            vignette.thumbnail(THUMB_MAX_SIZE, Image.LANCZOS)
+            photo = ImageTk.PhotoImage(vignette)
+            self.images_cache[skin.name] = photo
+            image_label.config(image=photo, text="")
+        except Exception:
+            image_label.config(text="Pas d'aperçu", fg="gray")
+
+    def _mettre_en_file_generation(self, skin: Path) -> None:
+        if any(s.name == skin.name for s in self._file_generation_apercus):
+            return
+        self._file_generation_apercus.append(skin)
+        if not self._generation_apercus_en_cours:
+            self._generation_apercus_en_cours = True
+            self.after(50, self._generer_prochain_apercu)
+
+    def _generer_prochain_apercu(self) -> None:
+        if not self.winfo_exists():
+            return
+        if not self._file_generation_apercus:
+            self._generation_apercus_en_cours = False
+            return
+
+        skin = self._file_generation_apercus.pop(0)
+        preview_path = APERCU_DIR / skin.with_suffix(".png").name
+        if not preview_path.exists():
             PREVIEW_GENERATOR.generate_preview(skin.name)
 
-        if preview_path.exists():
-            try:
-                with Image.open(preview_path) as source:
-                    vignette = source.copy()
-                vignette.thumbnail(THUMB_MAX_SIZE, Image.LANCZOS)
-                photo = ImageTk.PhotoImage(vignette)
-                self.images_cache[skin.name] = photo
-                image_label.config(image=photo, text="")
-                return
-            except Exception:
-                pass
+        # La grille a pu être reconstruite (recherche, onglet, redimensionnement)
+        # depuis la mise en file : on ne met à jour que si la carte est toujours là.
+        carte = self.cartes.get(skin.name)
+        if carte is not None and preview_path.exists():
+            self._afficher_vignette_depuis_fichier(skin, preview_path, carte.image_label)
 
-        image_label.config(text="Pas d'aperçu", fg="gray")
+        self.after(10, self._generer_prochain_apercu)
 
     # ------------------------------------------------------------------
     # Sélection / application
