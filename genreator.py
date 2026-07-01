@@ -293,8 +293,12 @@ class AvatarPreviewGenerator:
 
         u = u % 1.0
         v = v % 1.0
+        # glTF place l'origine UV (0,0) en haut à gauche de l'image (v croît vers
+        # le bas), donc v se mappe directement sur la ligne de pixels : un flip
+        # ici faisait échantillonner la mauvaise moitié des textures en atlas
+        # (ex. Ultra kill.vrm), donnant des couleurs sans rapport avec le modèle.
         x = min(width - 1, max(0, int(u * (width - 1) + 0.5)))
-        y = min(height - 1, max(0, int((1.0 - v) * (height - 1) + 0.5)))
+        y = min(height - 1, max(0, int(v * (height - 1) + 0.5)))
         return texture.getpixel((x, y))
 
     def _mix_color(self, color, factor):
