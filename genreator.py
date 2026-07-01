@@ -312,6 +312,13 @@ class AvatarPreviewGenerator:
 
     def _render_preview_image(self, skin_path, output_path, rotation_degrees=0.0, force=False):
         """Rend un aperçu du VRM avec une rotation autour de l'axe vertical."""
+        # Le cache de textures est ré-indexé par id(bin_chunk), qui peut être
+        # réutilisé par Python pour un tout autre fichier une fois l'ancien
+        # bin_chunk libéré (ce générateur est une instance partagée entre tous
+        # les skins). Sans ce vidage, un skin peut hériter des textures d'un
+        # skin précédent et se retrouver avec des couleurs complètement fausses.
+        self._texture_cache.clear()
+
         gltf, bin_chunk = self._load_glb(skin_path)
         if not gltf or not bin_chunk:
             img = Image.new("RGB", (900, 1200), color="white")
