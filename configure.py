@@ -128,7 +128,7 @@ class Application(tk.Tk):
         self.__recherche: str = ""
         self.__force_preview_generation: bool = False
         self.next_mode: Optional[str] = None
-        self.title("Gestionnaire de skins VRM")
+        self.title("VRM Skin Manager")
         self.geometry("960x650")
         self.minsize(860, 650)
         self.preview_image = None
@@ -146,7 +146,7 @@ class Application(tk.Tk):
         self.label_info.pack(side="left", pady=10)
 
         self.btn_vue_grille = tk.Button(
-            self.up_panel, text="Vue grille ▦", command=self.passer_en_vue_grille
+            self.up_panel, text="Grid view ▦", command=self.passer_en_vue_grille
         )
         self.btn_vue_grille.pack(side="right", padx=(10, 0), pady=10)
 
@@ -192,7 +192,7 @@ class Application(tk.Tk):
 
         self.listbox_scrollbar.config(command=self.listbox.yview)
 
-        preview_frame = tk.LabelFrame(contenu, text="Prévisualisation", padx=12, pady=12)
+        preview_frame = tk.LabelFrame(contenu, text="Preview", padx=12, pady=12)
         preview_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
 
 
@@ -279,7 +279,7 @@ class Application(tk.Tk):
         self.btn_favori.pack(fill="x", pady=(8, 0))
 
         self.btn_renommer = tk.Button(
-            preview_frame, text="Renommer le skin", command=self.renommer_skin_selectionne
+            preview_frame, text="Rename skin", command=self.renommer_skin_selectionne
         )
         self.btn_renommer.pack(fill="x", pady=(8, 0))
 
@@ -510,26 +510,26 @@ class Application(tk.Tk):
                 self.status_message.set(f"Skin added to favorites: {skin_path.name}")
             self.rafraichir(skin_path)
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible de changer le favori :\n{exc}")
+            messagebox.showerror("Error", f"Unable to change favorite:\n{exc}")
 
     def renommer_skin_selectionne(self) -> None:
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showwarning(
-                "Sélection manquante", "Choisis un skin dans la liste."
+                "Missing selection", "Choose a skin from the list."
             )
             return
 
         nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
-            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            messagebox.showerror("Error", "The selected file no longer exists.")
             self.rafraichir()
             return
 
         nouveau_nom = simpledialog.askstring(
-            "Renommer le skin",
-            "Nouveau nom du skin :",
+            "Rename skin",
+            "New skin name:",
             initialvalue=skin_path.stem,
             parent=self,
         )
@@ -539,31 +539,31 @@ class Application(tk.Tk):
         try:
             destination = renommer_skin(skin_path, nouveau_nom)
             self.__favoris = set(recuperer_liste_favoris())
-            self.status_message.set(f"Skin renommé : {nom} → {destination.name}")
+            self.status_message.set(f"Skin renamed: {nom} → {destination.name}")
             self.rafraichir(destination)
         except (ValueError, FileExistsError) as exc:
-            messagebox.showerror("Erreur", str(exc))
+            messagebox.showerror("Error", str(exc))
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible de renommer le skin :\n{exc}")
+            messagebox.showerror("Error", f"Unable to rename skin:\n{exc}")
 
     def changer_degre(self, degre: int) -> None:
         selection = self.listbox.curselection()
         if not selection:
             messagebox.showwarning(
-                "Sélection manquante", "Choisis un skin dans la liste."
+                "Missing selection", "Choose a skin from the list."
             )
             return
 
         nom = self.nom_skin_reel(self.listbox.get(selection[0]))
         skin_path = SKINS_DIR / nom
         if not skin_path.exists():
-            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            messagebox.showerror("Error", "The selected file no longer exists.")
             self.rafraichir()
             return
 
         nouveau_nom = simpledialog.askstring(
-            "Renommer le skin",
-            "Nouveau nom du skin :",
+            "Rename skin",
+            "New skin name:",
             initialvalue=skin_path.stem,
             parent=self,
         )
@@ -573,12 +573,12 @@ class Application(tk.Tk):
         try:
             destination = renommer_skin(skin_path, nouveau_nom)
             self.__favoris = set(recuperer_liste_favoris())
-            self.status_message.set(f"Skin renommé : {nom} → {destination.name}")
+            self.status_message.set(f"Skin renamed: {nom} → {destination.name}")
             self.rafraichir(destination)
         except (ValueError, FileExistsError) as exc:
-            messagebox.showerror("Erreur", str(exc))
+            messagebox.showerror("Error", str(exc))
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible de renommer le skin :\n{exc}")
+            messagebox.showerror("Error", f"Unable to rename skin:\n{exc}")
 
     def changer_degre(self, degre: int) -> None:
         selection = self.listbox.curselection()
@@ -657,7 +657,7 @@ class Application(tk.Tk):
             if tag in tags:
                 tags.remove(tag)
                 sauvegarder_tags(skin_path.name, tags)
-                self.status_message.set(f"Tag '{tag}' supprimé du skin {skin_path.name}")
+                self.status_message.set(f"Tag '{tag}' removed from skin {skin_path.name}")
                 self.rafraichir(skin_path)
             else:
                 messagebox.showinfo("Info", f"The tag '{tag}' does not exist for this skin.")
@@ -682,7 +682,7 @@ class Application(tk.Tk):
             btn.pack(side="left", pady=10, padx=4)
         bouton_ajouter_tag_preset = tk.Button(
             self.panel_get_tags,
-            text="+ Tag préréglé",
+            text="+ Preset tag",
             command=self.ouvrir_menu_presets_tags,
         )
         bouton_ajouter_tag_preset.pack(side="left", pady=10, padx=4)
@@ -692,8 +692,8 @@ class Application(tk.Tk):
         presets = recuperer_tags_presets()
         if not presets:
             messagebox.showinfo(
-                "Aucun préréglage",
-                "Ajoute des préréglages de tags depuis le menu ⚙ Options pour les retrouver ici.",
+                "No presets",
+                "Add tag presets from the ⚙ Options menu to find them here.",
             )
             return
 

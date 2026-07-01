@@ -74,7 +74,7 @@ class ApplicationGrille(tk.Tk):
         self._generation_apercus_en_cours: bool = False
         self._redimensionnement_apres_id: Optional[str] = None
 
-        self.title("Gestionnaire de skins VRM — Vue grille")
+        self.title("VRM Skin Manager — Grid View")
         self.geometry("1065x700")
         self.minsize(785, 560)
         if recuperer_plein_ecran_demarrage():
@@ -97,7 +97,7 @@ class ApplicationGrille(tk.Tk):
         configuration_verrouillee = recuperer_verrouillage_configuration_main()
         self.btn_vue_liste = tk.Button(
             entete,
-            text="☰ Vue liste (verrouillé)" if configuration_verrouillee else "☰ Vue liste",
+            text="☰ List view (locked)" if configuration_verrouillee else "☰ List view",
             command=self.passer_en_vue_liste,
             state="disabled" if configuration_verrouillee else "normal",
             bg="#455a64",
@@ -112,7 +112,7 @@ class ApplicationGrille(tk.Tk):
 
         tk.Label(
             entete,
-            text="COLLECTION DE SKINS",
+            text="SKIN COLLECTION",
             bg="#37474f",
             fg="white",
             font=("TkDefaultFont", 13, "bold"),
@@ -120,7 +120,7 @@ class ApplicationGrille(tk.Tk):
 
         self.current_applied_label = tk.Label(
             entete,
-            text="Skin appliqué : aucun",
+            text="Applied skin: none",
             bg="#37474f",
             fg="#c8e6c9",
         )
@@ -129,7 +129,7 @@ class ApplicationGrille(tk.Tk):
         options_verrouillees = recuperer_verrouillage_options_main()
         self.btn_options = tk.Button(
             entete,
-            text="⚙ Options (verrouillé)" if options_verrouillees else "⚙ Options",
+            text="⚙ Options (locked)" if options_verrouillees else "⚙ Options",
             command=self.ouvrir_options,
             state="disabled" if options_verrouillees else "normal",
             bg="#455a64",
@@ -147,12 +147,12 @@ class ApplicationGrille(tk.Tk):
         barre.pack(fill="x", padx=12, pady=(10, 4))
 
         self.btn_onglet_tous = tk.Button(
-            barre, text="TOUS", relief="flat", command=lambda: self.set_onglet("tous")
+            barre, text="ALL", relief="flat", command=lambda: self.set_onglet("tous")
         )
         self.btn_onglet_tous.pack(side="left")
 
         self.btn_onglet_favoris = tk.Button(
-            barre, text="FAVORIS", relief="flat", command=lambda: self.set_onglet("favoris")
+            barre, text="FAVORITES", relief="flat", command=lambda: self.set_onglet("favoris")
         )
         self.btn_onglet_favoris.pack(side="left", padx=(6, 0))
 
@@ -161,7 +161,7 @@ class ApplicationGrille(tk.Tk):
         self.recherche_bar.bind("<Return>", lambda e: self.set_recherche(self.recherche_bar.get().strip()))
 
         tk.Button(
-            barre, text="Rechercher", command=lambda: self.set_recherche(self.recherche_bar.get().strip())
+            barre, text="Search", command=lambda: self.set_recherche(self.recherche_bar.get().strip())
         ).pack(side="right", padx=(0, 6))
 
         self._actualiser_style_onglets()
@@ -190,16 +190,16 @@ class ApplicationGrille(tk.Tk):
         selection_bar.pack(fill="x", padx=12, pady=(0, 4))
 
         self.label_selection = tk.Label(
-            selection_bar, text="Clique sur un skin pour le sélectionner.", anchor="w"
+            selection_bar, text="Click a skin to select it.", anchor="w"
         )
         self.label_selection.pack(side="left")
 
         self.btn_appliquer = tk.Button(
-            selection_bar, text="Appliquer le skin sélectionné", state="disabled", command=self.on_appliquer
+            selection_bar, text="Apply selected skin", state="disabled", command=self.on_appliquer
         )
         self.btn_appliquer.pack(side="right")
 
-        self.btn_rafraichir = tk.Button(selection_bar, text="Rafraîchir", command=self.rafraichir)
+        self.btn_rafraichir = tk.Button(selection_bar, text="Refresh", command=self.rafraichir)
         self.btn_rafraichir.pack(side="right", padx=(0, 8))
 
         self.status_message = tk.StringVar(value="")
@@ -234,10 +234,10 @@ class ApplicationGrille(tk.Tk):
     def toggle_favori(self, skin_name: str) -> None:
         if skin_name in self.__favoris:
             self.__favoris.discard(skin_name)
-            self.status_message.set(f"Skin retiré des favoris : {skin_name}")
+            self.status_message.set(f"Skin removed from favorites: {skin_name}")
         else:
             self.__favoris.add(skin_name)
-            self.status_message.set(f"Skin ajouté aux favoris : {skin_name}")
+            self.status_message.set(f"Skin added to favorites: {skin_name}")
         sauvegarder_liste_favoris(list(self.__favoris))
         if self.__onglet == "favoris":
             self.rafraichir()
@@ -340,7 +340,7 @@ class ApplicationGrille(tk.Tk):
         if not skins:
             tk.Label(
                 self.grid_frame,
-                text="Aucun skin ne correspond à la recherche / à cet onglet.",
+                text="No skin matches the search / this tab.",
                 bg="#e0e0e0",
                 fg="gray",
                 pady=30,
@@ -375,7 +375,7 @@ class ApplicationGrille(tk.Tk):
         self._charger_vignette(skin, image_label)
 
         badge = tk.Label(
-            zone_image, text="✓ appliqué", bg=COULEUR_APPLIQUE, fg="white", font=("TkDefaultFont", 8, "bold")
+            zone_image, text="✓ applied", bg=COULEUR_APPLIQUE, fg="white", font=("TkDefaultFont", 8, "bold")
         )
         if skin_applique is not None and skin.name == skin_applique.name:
             badge.place(relx=0.0, rely=0.0, x=2, y=2, anchor="nw")
@@ -421,7 +421,7 @@ class ApplicationGrille(tk.Tk):
             # manquants n'ont pas fini de se générer (long au premier lancement).
             # On affiche un espace réservé et on reporte la génération après
             # l'affichage, une vignette à la fois.
-            image_label.config(image="", text="Génération...", fg="gray")
+            image_label.config(image="", text="Generating...", fg="gray")
             self._mettre_en_file_generation(skin)
             return
 
@@ -436,7 +436,7 @@ class ApplicationGrille(tk.Tk):
             self.images_cache[skin.name] = photo
             image_label.config(image=photo, text="")
         except Exception:
-            image_label.config(text="Pas d'aperçu", fg="gray")
+            image_label.config(text="No preview", fg="gray")
 
     def _mettre_en_file_generation(self, skin: Path) -> None:
         if any(s.name == skin.name for s in self._file_generation_apercus):
@@ -499,37 +499,37 @@ class ApplicationGrille(tk.Tk):
 
     def _actualiser_selection_bar(self) -> None:
         if self.selected_skin is None:
-            self.label_selection.config(text="Clique sur un skin pour le sélectionner.")
+            self.label_selection.config(text="Click a skin to select it.")
             self.btn_appliquer.config(state="disabled")
             return
 
         taille_ko = self.selected_skin.stat().st_size / 1024
-        self.label_selection.config(text=f"Sélectionné : {self.selected_skin.name} ({taille_ko:.1f} Ko)")
+        self.label_selection.config(text=f"Selected: {self.selected_skin.name} ({taille_ko:.1f} KB)")
         self.btn_appliquer.config(state="normal")
 
     def mettre_en_evidence_skin_applique(self, skin_applique: Optional[Path]) -> None:
         if skin_applique is None:
-            self.current_applied_label.config(text="Skin appliqué : aucun")
+            self.current_applied_label.config(text="Applied skin: none")
         else:
-            self.current_applied_label.config(text=f"Skin appliqué : {skin_applique.name}")
+            self.current_applied_label.config(text=f"Applied skin: {skin_applique.name}")
 
     def on_appliquer(self) -> None:
         if self.selected_skin is None:
-            messagebox.showwarning("Sélection manquante", "Choisis un skin dans la grille.")
+            messagebox.showwarning("No selection", "Choose a skin from the grid.")
             return
 
         skin_path = self.selected_skin
         if not skin_path.exists():
-            messagebox.showerror("Erreur", "Le fichier sélectionné n'existe plus.")
+            messagebox.showerror("Error", "The selected file no longer exists.")
             self.rafraichir()
             return
 
         try:
             destination = appliquer_skin(skin_path)
-            self.status_message.set(f"Skin appliqué : {skin_path.name} a été copié dans {destination}")
+            self.status_message.set(f"Applied skin: {skin_path.name} was copied to {destination}")
             self.rafraichir()
         except Exception as exc:  # pragma: no cover - interface utilisateur
-            messagebox.showerror("Erreur", f"Impossible d'appliquer le skin :\n{exc}")
+            messagebox.showerror("Error", f"Could not apply skin:\n{exc}")
 
 
 def main() -> None:

@@ -12,14 +12,14 @@ This project provides a small graphical interface to choose a skin in `.vrm` for
 
 ## What the programs do
 
-- `skins_core.py` contient la logique commune (lecture des skins, favoris, tags, options, application du skin) utilisée par les deux interfaces.
-- `configure.py` est l’interface « liste » : une liste texte des skins avec un panneau de configuration détaillé (rotation de l’aperçu, tags, régénération forcée).
-- `main.py` est l’interface « grille » : une grille visuelle de vignettes façon menu de sélection de skins, avec onglets Tous/Favoris et recherche, sans les réglages avancés.
-- `genreator.py` génère les images d’aperçu utilisées par les deux interfaces. Il lit le fichier `.vrm` et crée une image stockée dans `apercus/`.
-- `options_menu.py` fournit la fenêtre « Options », commune aux deux interfaces.
-- Les scripts travaillent ensemble : les interfaces appellent `genreator.py` quand un aperçu doit être créé ou mis à jour, et s’appuient sur `skins_core.py` pour toutes les opérations sur les skins.
-- Un bouton en haut de chaque interface (« Vue grille » / « Vue liste ») permet de passer de l’une à l’autre à tout moment, sans perdre le skin actuellement appliqué.
-- Un bouton « ⚙ Options », présent dans les deux interfaces, ouvre la fenêtre des options.
+- `skins_core.py` contains the common logic (reading skins, favorites, tags, options, applying a skin) used by both interfaces.
+- `configure.py` is the "list" interface: a text list of skins with a detailed configuration panel (preview rotation, tags, forced regeneration).
+- `main.py` is the "grid" interface: a visual grid of thumbnails like a game skin-selection menu, with All/Favorites tabs and search, without the advanced settings.
+- `genreator.py` generates the preview images used by both interfaces. It reads the `.vrm` file and creates an image stored in `apercus/`.
+- `options_menu.py` provides the "Options" window, shared by both interfaces.
+- The scripts work together: the interfaces call `genreator.py` whenever a preview needs to be created or updated, and rely on `skins_core.py` for all skin-related operations.
+- A button at the top of each interface ("Grid view" / "List view") lets you switch from one to the other at any time, without losing the currently applied skin.
+- An "⚙ Options" button, present in both interfaces, opens the options window.
 
 ## Prerequisites
 
@@ -34,50 +34,50 @@ pip install pillow
 
 ## Running the application
 
-Depuis le dossier du projet, exécute l’une des deux interfaces (le bouton de bascule permet de rejoindre l’autre ensuite) :
+From the project folder, run either of the two interfaces (the toggle button lets you switch to the other one afterwards):
 
 ```bash
-python configure.py  # interface liste + configuration
-python main.py        # interface grille visuelle
+python configure.py  # list + configuration interface
+python main.py        # visual grid interface
 ```
 
-## Utilisation
+## Usage
 
-### Interface liste (`configure.py`)
+### List interface (`configure.py`)
 
-1. Ouvre l’application.
-2. Clique sur un skin dans la liste de gauche.
-3. Vérifie l’aperçu à droite.
-4. Clique sur « Appliquer le skin » pour copier le fichier choisi à la racine du projet.
-5. Utilise « Rafraîchir » si tu ajoutes ou supprimes des fichiers dans `skins/` pendant que l’application est ouverte.
+1. Open the application.
+2. Click on a skin in the list on the left.
+3. Check the preview on the right.
+4. Click "Apply skin" to copy the chosen file to the root of the project.
+5. Use "Refresh" if you add or remove files in `skins/` while the application is open.
 
-### Interface grille (`main.py`)
+### Grid interface (`main.py`)
 
-1. Ouvre l’application.
-2. Choisis l’onglet « Tous » ou « Favoris », et filtre avec la barre de recherche si besoin.
-3. Clique sur une vignette pour la sélectionner (double-clic pour l’appliquer directement).
-4. Clique sur l’étoile d’une vignette pour l’ajouter/retirer des favoris.
-5. Clique sur « Appliquer le skin sélectionné » pour copier le fichier choisi à la racine du projet.
+1. Open the application.
+2. Choose the "ALL" or "FAVORITES" tab, and filter with the search bar if needed.
+3. Click a thumbnail to select it (double-click to apply it directly).
+4. Click a thumbnail's star to add/remove it from favorites.
+5. Click "Apply selected skin" to copy the chosen file to the root of the project.
 
-### Menu des options (« ⚙ Options »)
+### Options menu ("⚙ Options")
 
-Accessible depuis les deux interfaces :
+Accessible from both interfaces:
 
-1. **Interface au démarrage de `main.py`** : choisis si lancer `main.py` doit ouvrir la vue grille ou la vue liste par défaut.
-2. **Tags masquants** : coche les tags qui doivent masquer les skins qui les portent (ou ajoute-en un nouveau via le champ de texte). Un skin portant un tag masquant disparaît de la liste et de la grille, y compris dans la recherche par tag — c’est uniquement dans ce menu qu’on peut voir/gérer quels tags sont masquants et faire réapparaître les skins concernés.
+1. **Interface on `main.py` startup**: choose whether launching `main.py` should open the grid view or the list view by default.
+2. **Hiding tags**: check the tags that should hide the skins that carry them (or add a new one via the text field). A skin carrying a hiding tag disappears from the list and the grid, including from tag search — this menu is the only place where you can see/manage which tags are hiding tags and bring the affected skins back.
 
 ## Project structure
 
-- `skins_core.py` : logique commune (skins, favoris, tags, options, application du skin) partagée par les deux interfaces.
-- `configure.py` : interface graphique « liste ».
-- `main.py` : interface graphique « grille visuelle ».
-- `options_menu.py` : fenêtre des options (interface de démarrage, tags masquants).
-- `genreator.py` : génération des aperçus des skins.
-- `skins/` : dossier qui contient les fichiers `.vrm` disponibles.
-- `apercus/` : dossier qui contient les images d’aperçu générées.
+- `skins_core.py`: common logic (skins, favorites, tags, options, applying a skin) shared by both interfaces.
+- `configure.py`: "list" graphical interface.
+- `main.py`: "visual grid" graphical interface.
+- `options_menu.py`: options window (startup interface, hiding tags).
+- `genreator.py`: generation of skin previews.
+- `skins/`: folder containing the available `.vrm` files.
+- `apercus/`: folder containing the generated preview images.
 
 ## Notes
 
-- Le skin appliqué est simplement le fichier `.vrm` copié à la racine du projet.
-- Si aucun fichier `.vrm` n’est présent dans `skins/`, la liste reste vide.
-- Un skin portant un tag marqué comme masquant dans le menu des options n’apparaît plus dans les listes/grilles habituelles.
+- The applied skin is simply the `.vrm` file copied to the root of the project.
+- If no `.vrm` file is present in `skins/`, the list stays empty.
+- A skin carrying a tag marked as hiding in the options menu no longer appears in the usual lists/grids.
