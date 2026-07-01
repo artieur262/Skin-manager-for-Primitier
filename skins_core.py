@@ -255,13 +255,13 @@ def appliquer_skin(skin_path: Path) -> Path:
                         f.unlink()
                     except Exception:
                         messagebox.showwarning(
-                            "Erreur",
-                            f"Impossible de supprimer le fichier {f.name} dans le dossier courant.",
+                            "Ошибка",
+                            f"Не удалось удалить файл {f.name} из текущей папки.",
                         )
             except Exception:
                 messagebox.showwarning(
-                    "Erreur",
-                    f"Impossible de déplacer le fichier {f.name} dans le dossier skins.",
+                    "Ошибка",
+                    f"Не удалось переместить файл {f.name} в папку skins.",
                 )
 
     destination = BASE_DIR / skin_path.name

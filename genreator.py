@@ -708,21 +708,21 @@ class AvatarPreviewGenerator:
         skin_path = self.skins_dir / skin_name
         
         if not skin_path.exists():
-            print(f"Erreur: Le skin '{skin_name}' n'existe pas")
+            print(f"Ошибка: скин '{skin_name}' не найден")
             return False
-        
+
         # file_size = self.get_file_size(skin_path)
         preview_name = skin_name.replace('.vrm', '.png')
         preview_path = self.preview_dir / preview_name
-        
+
         if preview_path.exists():
             if rapide:
-                print(f"L'aperçu pour '{skin_name}' existe déjà. Passage au suivant.")
+                print(f"Превью для '{skin_name}' уже существует. Пропускаем.")
                 return True
             else:
                  # Supprimer l'aperçu existant pour le régénérer
                 os.remove(preview_path)
-                print(f"Régénération de l'aperçu pour {skin_name}")
+                print(f"Пересоздание превью для {skin_name}")
 
         # Créer une image de preview à partir de la texture embarquée dans le VRM
         self._render_preview_image(skin_path, preview_path, rotation_degrees=rotation, force=force)
@@ -738,32 +738,32 @@ class AvatarPreviewGenerator:
         # with open(metadata_path, 'w') as f:
         #     json.dump(metadata, f, indent=2)
         
-        print(f"Preview générée: {preview_path}")
+        print(f"Превью создано: {preview_path}")
         return True
-    
+
     def generate_all_previews(self, rapide:bool=True):
         """Génère les previews pour tous les skins"""
         skins = self.get_available_skins()
         if not skins:
-            print("Aucun skin trouvé dans le dossier 'skins'")
+            print("Скины не найдены в папке 'skins'")
             return
-        
+
         for skin in skins:
             self.generate_preview(skin, rapide=rapide)
-        
-        print(f"Génération terminée: {len(skins)} preview(s) créée(s)")
+
+        print(f"Создание завершено: {len(skins)} превью создано")
 
 
 if __name__ == "__main__":
     generator = AvatarPreviewGenerator()
-    
+
     # Afficher les skins disponibles
     skins = generator.get_available_skins()
-    print("Skins disponibles:")
+    print("Доступные скины:")
     for i, skin in enumerate(skins, 1):
         print(f"{i}. {skin}")
-    
+
     # Générer toutes les previews
     if skins:
-        print("\nGénération des previews...")
+        print("\nСоздание превью...")
         generator.generate_all_previews()

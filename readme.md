@@ -1,83 +1,83 @@
-# Gestionnaire de skins VRM
+# Менеджер скинов VRM
 
-Ce projet fournit une petite interface graphique pour choisir un skin au format `.vrm`, afficher un aperçu et l’appliquer au personnage.
+Этот проект предоставляет небольшой графический интерфейс для выбора скина в формате `.vrm`, показа превью и применения его к персонажу.
 
-## Ce que fait le programme
+## Что делает программа
 
-- Il lit tous les fichiers `.vrm` présents dans le dossier `skins/`.
-- Il affiche un aperçu du skin sélectionné avec son nom et la taille du fichier.
-- Il génère automatiquement une image d’aperçu dans `apercus/` si elle n’existe pas encore.
-- Quand tu appliques un skin, le fichier `.vrm` choisi est copié à la racine du projet.
-- Avant la copie, les autres fichiers `.vrm` présents à la racine sont supprimés.
+- Читает все файлы `.vrm`, находящиеся в папке `skins/`.
+- Показывает превью выбранного скина вместе с его именем и размером файла.
+- Автоматически создаёт изображение превью в `apercus/`, если его ещё нет.
+- Когда вы применяете скин, выбранный файл `.vrm` копируется в корень проекта.
+- Перед копированием другие файлы `.vrm`, находящиеся в корне, удаляются.
 
-## Ce que font les programmes
+## Что делают программы
 
-- `skins_core.py` contient la logique commune (lecture des skins, favoris, tags, options, application du skin) utilisée par les deux interfaces.
-- `configure.py` est l’interface « liste » : une liste texte des skins avec un panneau de configuration détaillé (rotation de l’aperçu, tags, régénération forcée).
-- `main.py` est l’interface « grille » : une grille visuelle de vignettes façon menu de sélection de skins, avec onglets Tous/Favoris et recherche, sans les réglages avancés.
-- `genreator.py` génère les images d’aperçu utilisées par les deux interfaces. Il lit le fichier `.vrm` et crée une image stockée dans `apercus/`.
-- `options_menu.py` fournit la fenêtre « Options », commune aux deux interfaces.
-- Les scripts travaillent ensemble : les interfaces appellent `genreator.py` quand un aperçu doit être créé ou mis à jour, et s’appuient sur `skins_core.py` pour toutes les opérations sur les skins.
-- Un bouton en haut de chaque interface (« Vue grille » / « Vue liste ») permet de passer de l’une à l’autre à tout moment, sans perdre le skin actuellement appliqué.
-- Un bouton « ⚙ Options », présent dans les deux interfaces, ouvre la fenêtre des options.
+- `skins_core.py` содержит общую логику (чтение скинов, избранное, теги, настройки, применение скина), используемую обоими интерфейсами.
+- `configure.py` — интерфейс «список»: текстовый список скинов с подробной панелью настройки (поворот превью, теги, принудительная перегенерация).
+- `main.py` — интерфейс «сетка»: визуальная сетка миниатюр в стиле меню выбора скина в видеоиграх, с вкладками «ВСЕ»/«ИЗБРАННОЕ» и поиском, без расширенных настроек.
+- `genreator.py` создаёт изображения превью, используемые обоими интерфейсами. Он читает файл `.vrm` и создаёт изображение, сохранённое в `apercus/`.
+- `options_menu.py` предоставляет окно «Настройки», общее для обоих интерфейсов.
+- Скрипты работают вместе: интерфейсы вызывают `genreator.py`, когда нужно создать или обновить превью, и опираются на `skins_core.py` для всех операций со скинами.
+- Кнопка вверху каждого интерфейса («Сетка» / «Список») позволяет в любой момент переключиться на другой интерфейс, не теряя текущий применённый скин.
+- Кнопка «⚙ Настройки», присутствующая в обоих интерфейсах, открывает окно настроек.
 
-## Prérequis
+## Требования
 
 - Python 3
-- La bibliothèque Pillow
+- Библиотека Pillow
 
-Installation de Pillow si besoin :
+Установка Pillow при необходимости:
 
 ```bash
 pip install pillow
 ```
 
-## Lancer l’application
+## Запуск приложения
 
-Depuis le dossier du projet, exécute l’une des deux interfaces (le bouton de bascule permet de rejoindre l’autre ensuite) :
+Из папки проекта запустите один из двух интерфейсов (кнопка переключения позволяет затем перейти в другой):
 
 ```bash
-python configure.py  # interface liste + configuration
-python main.py        # interface grille visuelle
+python configure.py  # интерфейс список + настройка
+python main.py        # интерфейс визуальная сетка
 ```
 
-## Utilisation
+## Использование
 
-### Interface liste (`configure.py`)
+### Интерфейс список (`configure.py`)
 
-1. Ouvre l’application.
-2. Clique sur un skin dans la liste de gauche.
-3. Vérifie l’aperçu à droite.
-4. Clique sur « Appliquer le skin » pour copier le fichier choisi à la racine du projet.
-5. Utilise « Rafraîchir » si tu ajoutes ou supprimes des fichiers dans `skins/` pendant que l’application est ouverte.
+1. Откройте приложение.
+2. Нажмите на скин в списке слева.
+3. Проверьте превью справа.
+4. Нажмите «Применить скин», чтобы скопировать выбранный файл в корень проекта.
+5. Используйте «Обновить», если вы добавляете или удаляете файлы в `skins/`, пока приложение открыто.
 
-### Interface grille (`main.py`)
+### Интерфейс сетка (`main.py`)
 
-1. Ouvre l’application.
-2. Choisis l’onglet « Tous » ou « Favoris », et filtre avec la barre de recherche si besoin.
-3. Clique sur une vignette pour la sélectionner (double-clic pour l’appliquer directement).
-4. Clique sur l’étoile d’une vignette pour l’ajouter/retirer des favoris.
-5. Clique sur « Appliquer le skin sélectionné » pour copier le fichier choisi à la racine du projet.
+1. Откройте приложение.
+2. Выберите вкладку «ВСЕ» или «ИЗБРАННОЕ» и при необходимости отфильтруйте через строку поиска.
+3. Нажмите на миниатюру, чтобы выбрать её (двойной клик — чтобы сразу применить).
+4. Нажмите на звезду миниатюры, чтобы добавить/убрать её из избранного.
+5. Нажмите «Применить выбранный скин», чтобы скопировать выбранный файл в корень проекта.
 
-### Menu des options (« ⚙ Options »)
+### Меню настроек («⚙ Настройки»)
 
-Accessible depuis les deux interfaces :
+Доступно из обоих интерфейсов:
 
-1. **Interface au démarrage de `main.py`** : choisis si lancer `main.py` doit ouvrir la vue grille ou la vue liste par défaut.
-2. **Tags masquants** : coche les tags qui doivent masquer les skins qui les portent (ou ajoute-en un nouveau via le champ de texte). Un skin portant un tag masquant disparaît de la liste et de la grille, y compris dans la recherche par tag — c’est uniquement dans ce menu qu’on peut voir/gérer quels tags sont masquants et faire réapparaître les skins concernés.
+1. **Интерфейс при запуске `main.py`**: выберите, должен ли `main.py` по умолчанию открывать сетку или список.
+2. **Скрывающие теги**: отметьте теги, которые должны скрывать скины с этими тегами (или добавьте новый через текстовое поле). Скин с таким тегом пропадает из списка и сетки, в том числе из поиска по тегу — только в этом меню можно увидеть/управлять тем, какие теги скрывающие, и вернуть соответствующие скины обратно.
 
-## Structure du projet
+## Структура проекта
 
-- `skins_core.py` : logique commune (skins, favoris, tags, options, application du skin) partagée par les deux interfaces.
-- `configure.py` : interface graphique « liste ».
-- `main.py` : interface graphique « grille visuelle ».
-- `options_menu.py` : fenêtre des options (interface de démarrage, tags masquants).
-- `genreator.py` : génération des aperçus des skins.
-- `skins/` : dossier qui contient les fichiers `.vrm` disponibles.
-- `apercus/` : dossier qui contient les images d’aperçu générées.
+- `skins_core.py`: общая логика (скины, избранное, теги, настройки, применение скина), используемая обоими интерфейсами.
+- `configure.py`: графический интерфейс «список».
+- `main.py`: графический интерфейс «визуальная сетка».
+- `options_menu.py`: окно настроек (интерфейс при запуске, скрывающие теги).
+- `genreator.py`: создание превью скинов.
+- `skins/`: папка, содержащая доступные файлы `.vrm`.
+- `apercus/`: папка, содержащая созданные изображения превью.
 
-## Notes
+## Заметки
 
-- Le skin appliqué est simplement le fichier `.vrm` copié à la racine du projet.
-- Si aucun fichier `.vrm` n’est présent dans `skins/`, la liste reste vide.
-- Un skin portant un tag marqué comme masquant dans le menu des options n’apparaît plus dans les listes/grilles habituelles.
+- Применённый скин — это просто файл `.vrm`, скопированный в корень проекта.
+- Если в `skins/` нет ни одного файла `.vrm`, список остаётся пустым.
+- Скин с тегом, отмеченным как скрывающий в меню настроек, больше не появляется в обычных списках/сетках.

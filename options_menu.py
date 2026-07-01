@@ -32,7 +32,7 @@ from skins_core import (
 class FenetreOptions(tk.Toplevel):
     def __init__(self, parent: tk.Tk, on_close=None) -> None:
         super().__init__(parent)
-        self.title("Options")
+        self.title("Настройки")
         self.geometry("440x480")
         self.minsize(400, 420)
         self.transient(parent)
@@ -47,9 +47,9 @@ class FenetreOptions(tk.Toplevel):
         onglet_general = tk.Frame(notebook)
         onglet_tags = tk.Frame(notebook)
         onglet_entretien = tk.Frame(notebook)
-        notebook.add(onglet_general, text="Général")
-        notebook.add(onglet_tags, text="Tags")
-        notebook.add(onglet_entretien, text="Entretien")
+        notebook.add(onglet_general, text="Общие")
+        notebook.add(onglet_tags, text="Теги")
+        notebook.add(onglet_entretien, text="Обслуживание")
 
         self._construire_interface_demarrage(onglet_general)
         self._construire_verrouillage_main(onglet_general)
@@ -62,20 +62,20 @@ class FenetreOptions(tk.Toplevel):
 
     # ------------------------------------------------------------------
     def _construire_interface_demarrage(self, parent: tk.Widget) -> None:
-        cadre = tk.LabelFrame(parent, text="Interface au démarrage de main.py", padx=10, pady=10)
+        cadre = tk.LabelFrame(parent, text="Интерфейс при запуске main.py", padx=10, pady=10)
         cadre.pack(fill="x", padx=10, pady=(10, 6))
 
         self.interface_var = tk.StringVar(value=recuperer_interface_demarrage())
         tk.Radiobutton(
             cadre,
-            text="Vue grille (visuelle)",
+            text="Сетка (визуальная)",
             variable=self.interface_var,
             value="grille",
             command=self._changer_interface_demarrage,
         ).pack(anchor="w")
         tk.Radiobutton(
             cadre,
-            text="Vue liste (configuration)",
+            text="Список (настройка)",
             variable=self.interface_var,
             value="liste",
             command=self._changer_interface_demarrage,
@@ -84,7 +84,7 @@ class FenetreOptions(tk.Toplevel):
         self.plein_ecran_var = tk.BooleanVar(value=recuperer_plein_ecran_demarrage())
         tk.Checkbutton(
             cadre,
-            text="Démarrer en plein écran (fenêtre maximisée)",
+            text="Запускать в полноэкранном режиме (развёрнутое окно)",
             variable=self.plein_ecran_var,
             command=lambda: sauvegarder_plein_ecran_demarrage(self.plein_ecran_var.get()),
         ).pack(anchor="w", pady=(6, 0))
@@ -94,12 +94,12 @@ class FenetreOptions(tk.Toplevel):
 
     # ------------------------------------------------------------------
     def _construire_verrouillage_main(self, parent: tk.Widget) -> None:
-        cadre = tk.LabelFrame(parent, text="Verrouillage depuis main.py", padx=10, pady=10)
+        cadre = tk.LabelFrame(parent, text="Блокировка из main.py", padx=10, pady=10)
         cadre.pack(fill="x", padx=10, pady=6)
 
         tk.Label(
             cadre,
-            text="Une fois bloqué, seul configure.py permet de débloquer l'accès.",
+            text="После блокировки разблокировать доступ можно только через configure.py.",
             justify="left",
             fg="gray",
             wraplength=360,
@@ -108,7 +108,7 @@ class FenetreOptions(tk.Toplevel):
         self.verrouiller_options_var = tk.BooleanVar(value=recuperer_verrouillage_options_main())
         tk.Checkbutton(
             cadre,
-            text="Bloquer l'accès au menu des options",
+            text="Заблокировать доступ к меню настроек",
             variable=self.verrouiller_options_var,
             command=lambda: sauvegarder_verrouillage_options_main(self.verrouiller_options_var.get()),
         ).pack(anchor="w")
@@ -118,7 +118,7 @@ class FenetreOptions(tk.Toplevel):
         )
         tk.Checkbutton(
             cadre,
-            text="Bloquer l'accès à la configuration (vue liste)",
+            text="Заблокировать доступ к настройке (список)",
             variable=self.verrouiller_configuration_var,
             command=lambda: sauvegarder_verrouillage_configuration_main(
                 self.verrouiller_configuration_var.get()
@@ -127,7 +127,7 @@ class FenetreOptions(tk.Toplevel):
 
     # ------------------------------------------------------------------
     def _construire_tags_presets(self, parent: tk.Widget) -> None:
-        cadre = tk.LabelFrame(parent, text="Préréglages de tags (ajout rapide)", padx=10, pady=10)
+        cadre = tk.LabelFrame(parent, text="Готовые теги (быстрое добавление)", padx=10, pady=10)
         cadre.pack(fill="x", padx=10, pady=(10, 6))
 
         self.presets_liste_frame = tk.Frame(cadre)
@@ -141,7 +141,7 @@ class FenetreOptions(tk.Toplevel):
         self.nouveau_preset_entry.pack(side="left", fill="x", expand=True)
         self.nouveau_preset_entry.bind("<Return>", lambda e: self._ajouter_preset())
         tk.Button(
-            ajout_frame, text="Ajouter", command=self._ajouter_preset
+            ajout_frame, text="Добавить", command=self._ajouter_preset
         ).pack(side="left", padx=(6, 0))
 
     def _rendre_liste_presets(self) -> None:
@@ -151,7 +151,7 @@ class FenetreOptions(tk.Toplevel):
         presets = recuperer_tags_presets()
         if not presets:
             tk.Label(
-                self.presets_liste_frame, text="Aucun préréglage pour l'instant.", fg="gray"
+                self.presets_liste_frame, text="Пока нет готовых тегов.", fg="gray"
             ).pack(anchor="w")
             return
 
@@ -183,12 +183,12 @@ class FenetreOptions(tk.Toplevel):
 
     # ------------------------------------------------------------------
     def _construire_tags_masquants(self, parent: tk.Widget) -> None:
-        cadre = tk.LabelFrame(parent, text="Tags masquants", padx=10, pady=10)
+        cadre = tk.LabelFrame(parent, text="Скрывающие теги", padx=10, pady=10)
         cadre.pack(fill="both", expand=True, padx=10, pady=6)
 
         tk.Label(
             cadre,
-            text="Coche un tag pour masquer partout les skins qui le portent.",
+            text="Отметьте тег, чтобы везде скрыть скины с этим тегом.",
             justify="left",
             fg="gray",
             wraplength=360,
@@ -217,7 +217,7 @@ class FenetreOptions(tk.Toplevel):
         self.nouveau_tag_entry.pack(side="left", fill="x", expand=True)
         self.nouveau_tag_entry.bind("<Return>", lambda e: self._ajouter_tag_masquant())
         tk.Button(
-            ajout_frame, text="Ajouter comme masquant", command=self._ajouter_tag_masquant
+            ajout_frame, text="Добавить как скрывающий", command=self._ajouter_tag_masquant
         ).pack(side="left", padx=(6, 0))
 
     def _rendre_liste_tags(self) -> None:
@@ -231,7 +231,7 @@ class FenetreOptions(tk.Toplevel):
         )
 
         if not tous_les_tags:
-            tk.Label(self.liste_frame, text="Aucun tag n'a encore été créé.", fg="gray").pack(anchor="w")
+            tk.Label(self.liste_frame, text="Пока не создано ни одного тега.", fg="gray").pack(anchor="w")
             return
 
         for tag in tous_les_tags:
@@ -270,9 +270,9 @@ class FenetreOptions(tk.Toplevel):
         tk.Label(
             cadre,
             text=(
-                "Renomme les skins encore nommés par leur identifiant "
-                "hub.vroid.com (ex. 6795810513740058493.vrm) en utilisant "
-                "le titre présent dans les métadonnées du fichier .vrm."
+                "Переименовывает скины, всё ещё названные по их идентификатору "
+                "hub.vroid.com (например, 6795810513740058493.vrm), используя "
+                "название, указанное в метаданных файла .vrm."
             ),
             justify="left",
             fg="gray",
@@ -281,18 +281,18 @@ class FenetreOptions(tk.Toplevel):
 
         tk.Button(
             cadre,
-            text="Renommer les avatars VRoid Hub",
+            text="Переименовать аватары VRoid Hub",
             command=self._renommer_avatars_vroid_hub,
         ).pack(anchor="w")
 
     def _renommer_avatars_vroid_hub(self) -> None:
         resultat = renommer_avatars_vroid_hub()
 
-        lignes = [f"{len(resultat['renommes'])} avatar(s) renommé(s)."]
+        lignes = [f"Переименовано аватаров: {len(resultat['renommes'])}."]
         if resultat["ignores"]:
-            lignes.append(f"{len(resultat['ignores'])} ignoré(s) (pas de titre dans les métadonnées).")
+            lignes.append(f"Пропущено: {len(resultat['ignores'])} (нет названия в метаданных).")
         if resultat["erreurs"]:
-            lignes.append(f"{len(resultat['erreurs'])} erreur(s).")
+            lignes.append(f"Ошибок: {len(resultat['erreurs'])}.")
 
         if resultat["renommes"]:
             lignes.append("")
@@ -300,11 +300,11 @@ class FenetreOptions(tk.Toplevel):
             if len(resultat["renommes"]) > 15:
                 lignes.append("...")
 
-        messagebox.showinfo("Renommage VRoid Hub", "\n".join(lignes), parent=self)
+        messagebox.showinfo("Переименование VRoid Hub", "\n".join(lignes), parent=self)
 
     # ------------------------------------------------------------------
     def _construire_bas(self) -> None:
-        tk.Button(self, text="Fermer", command=self._fermer).pack(pady=(0, 10))
+        tk.Button(self, text="Закрыть", command=self._fermer).pack(pady=(0, 10))
 
     def _fermer(self) -> None:
         self.grab_release()
