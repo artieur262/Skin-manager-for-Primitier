@@ -605,7 +605,7 @@ class Application(tk.Tk):
                 tags.remove(tag)
                 sauvegarder_tags(skin_path.name, tags)
                 self.status_message.set(f"Tag '{tag}' supprimé du skin {skin_path.name}")
-                self.rafraichir()
+                self.rafraichir(skin_path)
             else:
                 messagebox.showinfo("Info", f"Le tag '{tag}' n'existe pas pour ce skin.")
         except Exception as exc:  # pragma: no cover - interface utilisateur
