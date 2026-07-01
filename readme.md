@@ -1,83 +1,83 @@
-# Gestionnaire de skins VRM
+# VRMスキンマネージャー
 
-Ce projet fournit une petite interface graphique pour choisir un skin au format `.vrm`, afficher un aperçu et l’appliquer au personnage.
+このプロジェクトは、`.vrm` 形式のスキンを選び、プレビューを表示してキャラクターに適用するための小さなグラフィカルインターフェースを提供します。
 
-## Ce que fait le programme
+## プログラムの機能
 
-- Il lit tous les fichiers `.vrm` présents dans le dossier `skins/`.
-- Il affiche un aperçu du skin sélectionné avec son nom et la taille du fichier.
-- Il génère automatiquement une image d’aperçu dans `apercus/` si elle n’existe pas encore.
-- Quand tu appliques un skin, le fichier `.vrm` choisi est copié à la racine du projet.
-- Avant la copie, les autres fichiers `.vrm` présents à la racine sont supprimés.
+- `skins/` フォルダにあるすべての `.vrm` ファイルを読み込みます。
+- 選択したスキンのプレビューを、名前とファイルサイズとともに表示します。
+- プレビュー画像がまだ存在しない場合、`apercus/` に自動で生成します。
+- スキンを適用すると、選択した `.vrm` ファイルがプロジェクトのルートにコピーされます。
+- コピーの前に、ルートにある他の `.vrm` ファイルは削除されます。
 
-## Ce que font les programmes
+## 各プログラムの役割
 
-- `skins_core.py` contient la logique commune (lecture des skins, favoris, tags, options, application du skin) utilisée par les deux interfaces.
-- `configure.py` est l’interface « liste » : une liste texte des skins avec un panneau de configuration détaillé (rotation de l’aperçu, tags, régénération forcée).
-- `main.py` est l’interface « grille » : une grille visuelle de vignettes façon menu de sélection de skins, avec onglets Tous/Favoris et recherche, sans les réglages avancés.
-- `genreator.py` génère les images d’aperçu utilisées par les deux interfaces. Il lit le fichier `.vrm` et crée une image stockée dans `apercus/`.
-- `options_menu.py` fournit la fenêtre « Options », commune aux deux interfaces.
-- Les scripts travaillent ensemble : les interfaces appellent `genreator.py` quand un aperçu doit être créé ou mis à jour, et s’appuient sur `skins_core.py` pour toutes les opérations sur les skins.
-- Un bouton en haut de chaque interface (« Vue grille » / « Vue liste ») permet de passer de l’une à l’autre à tout moment, sans perdre le skin actuellement appliqué.
-- Un bouton « ⚙ Options », présent dans les deux interfaces, ouvre la fenêtre des options.
+- `skins_core.py` は、両方のインターフェースで使われる共通ロジック（スキンの読み込み、お気に入り、タグ、設定、スキンの適用）を含みます。
+- `configure.py` は「リスト」インターフェースです：スキンのテキストリストと、詳細な設定パネル（プレビューの回転、タグ、強制再生成）を備えています。
+- `main.py` は「グリッド」インターフェースです：ビデオゲームのスキン選択メニューのような、ビジュアルなサムネイルのグリッドで、「すべて」/「お気に入り」タブと検索機能があり、高度な設定はありません。
+- `genreator.py` は両方のインターフェースで使われるプレビュー画像を生成します。`.vrm` ファイルを読み込み、`apercus/` に画像を保存します。
+- `options_menu.py` は、両方のインターフェースで共通の「設定」ウィンドウを提供します。
+- スクリプトは連携して動作します：インターフェースはプレビューの作成・更新が必要なときに `genreator.py` を呼び出し、スキンに関するすべての操作は `skins_core.py` に依存します。
+- 各インターフェースの上部にあるボタン（「グリッド表示」/「リスト表示」）で、現在適用中のスキンを失うことなく、いつでも他方のインターフェースに切り替えられます。
+- 両方のインターフェースにある「⚙ 設定」ボタンで、設定ウィンドウが開きます。
 
-## Prérequis
+## 必要条件
 
 - Python 3
-- La bibliothèque Pillow
+- Pillowライブラリ
 
-Installation de Pillow si besoin :
+必要に応じてPillowをインストール：
 
 ```bash
 pip install pillow
 ```
 
-## Lancer l’application
+## アプリケーションの起動
 
-Depuis le dossier du projet, exécute l’une des deux interfaces (le bouton de bascule permet de rejoindre l’autre ensuite) :
+プロジェクトのフォルダから、いずれかのインターフェースを実行してください（切り替えボタンで後からもう一方に移動できます）：
 
 ```bash
-python configure.py  # interface liste + configuration
-python main.py        # interface grille visuelle
+python configure.py  # リスト＋設定インターフェース
+python main.py        # ビジュアルグリッドインターフェース
 ```
 
-## Utilisation
+## 使い方
 
-### Interface liste (`configure.py`)
+### リストインターフェース（`configure.py`）
 
-1. Ouvre l’application.
-2. Clique sur un skin dans la liste de gauche.
-3. Vérifie l’aperçu à droite.
-4. Clique sur « Appliquer le skin » pour copier le fichier choisi à la racine du projet.
-5. Utilise « Rafraîchir » si tu ajoutes ou supprimes des fichiers dans `skins/` pendant que l’application est ouverte.
+1. アプリケーションを開きます。
+2. 左側のリストからスキンをクリックします。
+3. 右側でプレビューを確認します。
+4. 「スキンを適用」をクリックして、選択したファイルをプロジェクトのルートにコピーします。
+5. アプリケーションを開いている間に `skins/` にファイルを追加/削除した場合は「更新」を使います。
 
-### Interface grille (`main.py`)
+### グリッドインターフェース（`main.py`）
 
-1. Ouvre l’application.
-2. Choisis l’onglet « Tous » ou « Favoris », et filtre avec la barre de recherche si besoin.
-3. Clique sur une vignette pour la sélectionner (double-clic pour l’appliquer directement).
-4. Clique sur l’étoile d’une vignette pour l’ajouter/retirer des favoris.
-5. Clique sur « Appliquer le skin sélectionné » pour copier le fichier choisi à la racine du projet.
+1. アプリケーションを開きます。
+2. 「すべて」または「お気に入り」タブを選び、必要に応じて検索バーで絞り込みます。
+3. サムネイルをクリックして選択します（ダブルクリックで直接適用）。
+4. サムネイルの星をクリックして、お気に入りに追加/削除します。
+5. 「選択したスキンを適用」をクリックして、選択したファイルをプロジェクトのルートにコピーします。
 
-### Menu des options (« ⚙ Options »)
+### 設定メニュー（「⚙ 設定」）
 
-Accessible depuis les deux interfaces :
+両方のインターフェースからアクセス可能です：
 
-1. **Interface au démarrage de `main.py`** : choisis si lancer `main.py` doit ouvrir la vue grille ou la vue liste par défaut.
-2. **Tags masquants** : coche les tags qui doivent masquer les skins qui les portent (ou ajoute-en un nouveau via le champ de texte). Un skin portant un tag masquant disparaît de la liste et de la grille, y compris dans la recherche par tag — c’est uniquement dans ce menu qu’on peut voir/gérer quels tags sont masquants et faire réapparaître les skins concernés.
+1. **`main.py`起動時のインターフェース**：`main.py` の起動時にグリッド表示とリスト表示のどちらをデフォルトで開くかを選びます。
+2. **非表示タグ**：そのタグを持つスキンを非表示にしたいタグにチェックを入れます（またはテキスト欄から新しいタグを追加します）。非表示タグを持つスキンは、タグ検索を含め、リストとグリッドから消えます — どのタグが非表示タグかを確認・管理し、対象のスキンを再表示できるのは、このメニューだけです。
 
-## Structure du projet
+## プロジェクト構成
 
-- `skins_core.py` : logique commune (skins, favoris, tags, options, application du skin) partagée par les deux interfaces.
-- `configure.py` : interface graphique « liste ».
-- `main.py` : interface graphique « grille visuelle ».
-- `options_menu.py` : fenêtre des options (interface de démarrage, tags masquants).
-- `genreator.py` : génération des aperçus des skins.
-- `skins/` : dossier qui contient les fichiers `.vrm` disponibles.
-- `apercus/` : dossier qui contient les images d’aperçu générées.
+- `skins_core.py`：両方のインターフェースで共有される共通ロジック（スキン、お気に入り、タグ、設定、スキンの適用）。
+- `configure.py`：「リスト」グラフィカルインターフェース。
+- `main.py`：「ビジュアルグリッド」グラフィカルインターフェース。
+- `options_menu.py`：設定ウィンドウ（起動時のインターフェース、非表示タグ）。
+- `genreator.py`：スキンのプレビュー生成。
+- `skins/`：利用可能な `.vrm` ファイルを含むフォルダ。
+- `apercus/`：生成されたプレビュー画像を含むフォルダ。
 
-## Notes
+## 補足
 
-- Le skin appliqué est simplement le fichier `.vrm` copié à la racine du projet.
-- Si aucun fichier `.vrm` n’est présent dans `skins/`, la liste reste vide.
-- Un skin portant un tag marqué comme masquant dans le menu des options n’apparaît plus dans les listes/grilles habituelles.
+- 適用中のスキンとは、単にプロジェクトのルートにコピーされた `.vrm` ファイルのことです。
+- `skins/` に `.vrm` ファイルが1つもない場合、リストは空のままです。
+- 設定メニューで非表示タグとしてマークされたタグを持つスキンは、通常のリスト/グリッドには表示されなくなります。

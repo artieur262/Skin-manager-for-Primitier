@@ -708,21 +708,21 @@ class AvatarPreviewGenerator:
         skin_path = self.skins_dir / skin_name
         
         if not skin_path.exists():
-            print(f"Erreur: Le skin '{skin_name}' n'existe pas")
+            print(f"エラー：スキン '{skin_name}' が見つかりません")
             return False
-        
+
         # file_size = self.get_file_size(skin_path)
         preview_name = skin_name.replace('.vrm', '.png')
         preview_path = self.preview_dir / preview_name
-        
+
         if preview_path.exists():
             if rapide:
-                print(f"L'aperçu pour '{skin_name}' existe déjà. Passage au suivant.")
+                print(f"'{skin_name}' のプレビューは既に存在します。スキップします。")
                 return True
             else:
                  # Supprimer l'aperçu existant pour le régénérer
                 os.remove(preview_path)
-                print(f"Régénération de l'aperçu pour {skin_name}")
+                print(f"{skin_name} のプレビューを再生成しています")
 
         # Créer une image de preview à partir de la texture embarquée dans le VRM
         self._render_preview_image(skin_path, preview_path, rotation_degrees=rotation, force=force)
@@ -738,32 +738,32 @@ class AvatarPreviewGenerator:
         # with open(metadata_path, 'w') as f:
         #     json.dump(metadata, f, indent=2)
         
-        print(f"Preview générée: {preview_path}")
+        print(f"プレビューを生成しました：{preview_path}")
         return True
-    
+
     def generate_all_previews(self, rapide:bool=True):
         """Génère les previews pour tous les skins"""
         skins = self.get_available_skins()
         if not skins:
-            print("Aucun skin trouvé dans le dossier 'skins'")
+            print("'skins'フォルダにスキンが見つかりません")
             return
-        
+
         for skin in skins:
             self.generate_preview(skin, rapide=rapide)
-        
-        print(f"Génération terminée: {len(skins)} preview(s) créée(s)")
+
+        print(f"生成完了：{len(skins)}件のプレビューを作成しました")
 
 
 if __name__ == "__main__":
     generator = AvatarPreviewGenerator()
-    
+
     # Afficher les skins disponibles
     skins = generator.get_available_skins()
-    print("Skins disponibles:")
+    print("利用可能なスキン：")
     for i, skin in enumerate(skins, 1):
         print(f"{i}. {skin}")
-    
+
     # Générer toutes les previews
     if skins:
-        print("\nGénération des previews...")
+        print("\nプレビューを生成しています...")
         generator.generate_all_previews()
