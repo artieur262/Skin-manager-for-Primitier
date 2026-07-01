@@ -226,14 +226,14 @@ class Application(tk.Tk):
         self.panel_add_tags.pack(fill="x", pady=(8, 0))
 
         self.ajouter_tags_entry = tk.Entry(self.panel_add_tags)
-        self.ajouter_tags_entry.pack(fill="x", pady=(8, 0))
+        self.ajouter_tags_entry.pack(side="left", fill="x", expand=True, pady=(8, 0))
 
         self.btn_ajouter_tags = tk.Button(
             self.panel_add_tags,
             text="Ajouter un tag",
             command=lambda: self.ajouter_tags(self.ajouter_tags_entry.get().strip())
         )
-        self.btn_ajouter_tags.pack(fill="x", pady=(8, 0))
+        self.btn_ajouter_tags.pack(side="left", padx=(6, 0), pady=(8, 0))
 
         self.preview_image_label = tk.Label(
             preview_frame,
