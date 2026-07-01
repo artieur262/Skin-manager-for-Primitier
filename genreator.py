@@ -616,6 +616,36 @@ class AvatarPreviewGenerator:
         warped.putalpha(ImageChops.multiply(alpha, triangle_mask))
         canvas.alpha_composite(warped, (min_x, min_y))
 
+    def read_vrm_meta(self, skin_path):
+        """Retourne les métadonnées VRM du fichier, normalisées avec un champ "title".
+
+        Gère à la fois le VRM 0.x (extensions.VRM.meta.title) et le VRM 1.0
+        (extensions.VRMC_vrm.meta.name) : sans ça, les fichiers VRM 1.0 (de
+        plus en plus courants sur hub.vroid.com) ressortaient sans aucune
+        métadonnée exploitable.
+        """
+        gltf, _ = self._load_glb(Path(skin_path))
+        if not gltf:
+            return {}
+        extensions = gltf.get("extensions", {})
+
+        vrm0_extension = extensions.get("VRM", {})
+        meta0 = vrm0_extension.get("meta", {}) if isinstance(vrm0_extension, dict) else {}
+        if isinstance(meta0, dict) and meta0.get("title"):
+            return meta0
+
+        vrm1_extension = extensions.get("VRMC_vrm", {})
+        meta1 = vrm1_extension.get("meta", {}) if isinstance(vrm1_extension, dict) else {}
+        if isinstance(meta1, dict) and meta1.get("name"):
+            meta_normalisee = dict(meta1)
+            meta_normalisee.setdefault("title", meta1.get("name"))
+            auteurs = meta1.get("authors")
+            if auteurs:
+                meta_normalisee.setdefault("author", ", ".join(auteurs))
+            return meta_normalisee
+
+        return meta0 if isinstance(meta0, dict) else {}
+
     def create_preview_image(self, skin_path, output_path):
         self._render_preview_image(skin_path, output_path, rotation_degrees=0.0)
 

@@ -1,16 +1,14 @@
 """
 Fenêtre des options, commune aux deux interfaces (configure.py et main.py).
 
-Elle permet :
-- de choisir l'interface affichée au démarrage de main.py (vue grille ou liste) ;
-- de gérer des préréglages de tags, pour les ajouter rapidement à un skin
-  depuis la vue liste (bouton d'ajout rapide par préréglage) ;
-- de choisir quels tags masquent les skins qui les portent. Un skin portant
-  un tag masquant disparaît des listes/grilles habituelles ; c'est ici, et
-  uniquement ici, que l'on peut savoir quels tags sont masquants et changer
-  ça.
+Organisée en onglets pour rester compacte :
+- Général : interface affichée au démarrage de main.py, verrouillage de main.py.
+- Tags : préréglages de tags (ajout rapide) et tags masquants (cachent les
+  skins qui les portent, uniquement gérable ici).
+- Entretien : actions ponctuelles (renommage des avatars VRoid Hub).
 """
 import tkinter as tk
+from tkinter import messagebox, ttk
 from typing import Dict
 
 from skins_core import (
@@ -20,6 +18,7 @@ from skins_core import (
     recuperer_tags_presets,
     recuperer_verrouillage_configuration_main,
     recuperer_verrouillage_options_main,
+    renommer_avatars_vroid_hub,
     sauvegarder_interface_demarrage,
     sauvegarder_tags_masques,
     sauvegarder_tags_presets,
@@ -32,26 +31,37 @@ class FenetreOptions(tk.Toplevel):
     def __init__(self, parent: tk.Tk, on_close=None) -> None:
         super().__init__(parent)
         self.title("Options")
-        self.geometry("440x780")
-        self.minsize(380, 560)
+        self.geometry("440x480")
+        self.minsize(400, 420)
         self.transient(parent)
         self.grab_set()
 
         self._on_close = on_close
         self.variables_tags: Dict[str, tk.BooleanVar] = {}
 
-        self._construire_interface_demarrage()
-        self._construire_verrouillage_main()
-        self._construire_tags_presets()
-        self._construire_tags_masquants()
+        notebook = ttk.Notebook(self)
+        notebook.pack(fill="both", expand=True, padx=10, pady=(10, 4))
+
+        onglet_general = tk.Frame(notebook)
+        onglet_tags = tk.Frame(notebook)
+        onglet_entretien = tk.Frame(notebook)
+        notebook.add(onglet_general, text="Général")
+        notebook.add(onglet_tags, text="Tags")
+        notebook.add(onglet_entretien, text="Entretien")
+
+        self._construire_interface_demarrage(onglet_general)
+        self._construire_verrouillage_main(onglet_general)
+        self._construire_tags_presets(onglet_tags)
+        self._construire_tags_masquants(onglet_tags)
+        self._construire_entretien(onglet_entretien)
         self._construire_bas()
 
         self.protocol("WM_DELETE_WINDOW", self._fermer)
 
     # ------------------------------------------------------------------
-    def _construire_interface_demarrage(self) -> None:
-        cadre = tk.LabelFrame(self, text="Interface au démarrage de main.py", padx=10, pady=10)
-        cadre.pack(fill="x", padx=12, pady=(12, 6))
+    def _construire_interface_demarrage(self, parent: tk.Widget) -> None:
+        cadre = tk.LabelFrame(parent, text="Interface au démarrage de main.py", padx=10, pady=10)
+        cadre.pack(fill="x", padx=10, pady=(10, 6))
 
         self.interface_var = tk.StringVar(value=recuperer_interface_demarrage())
         tk.Radiobutton(
@@ -73,22 +83,22 @@ class FenetreOptions(tk.Toplevel):
         sauvegarder_interface_demarrage(self.interface_var.get())
 
     # ------------------------------------------------------------------
-    def _construire_verrouillage_main(self) -> None:
-        cadre = tk.LabelFrame(self, text="Verrouillage depuis main.py", padx=10, pady=10)
-        cadre.pack(fill="x", padx=12, pady=6)
+    def _construire_verrouillage_main(self, parent: tk.Widget) -> None:
+        cadre = tk.LabelFrame(parent, text="Verrouillage depuis main.py", padx=10, pady=10)
+        cadre.pack(fill="x", padx=10, pady=6)
 
         tk.Label(
             cadre,
             text="Une fois bloqué, seul configure.py permet de débloquer l'accès.",
             justify="left",
             fg="gray",
-            wraplength=320,
+            wraplength=360,
         ).pack(anchor="w", pady=(0, 6))
 
         self.verrouiller_options_var = tk.BooleanVar(value=recuperer_verrouillage_options_main())
         tk.Checkbutton(
             cadre,
-            text="Bloquer l'accès au menu des options depuis main.py",
+            text="Bloquer l'accès au menu des options",
             variable=self.verrouiller_options_var,
             command=lambda: sauvegarder_verrouillage_options_main(self.verrouiller_options_var.get()),
         ).pack(anchor="w")
@@ -98,7 +108,7 @@ class FenetreOptions(tk.Toplevel):
         )
         tk.Checkbutton(
             cadre,
-            text="Bloquer l'accès à la configuration (vue liste) depuis main.py",
+            text="Bloquer l'accès à la configuration (vue liste)",
             variable=self.verrouiller_configuration_var,
             command=lambda: sauvegarder_verrouillage_configuration_main(
                 self.verrouiller_configuration_var.get()
@@ -106,11 +116,9 @@ class FenetreOptions(tk.Toplevel):
         ).pack(anchor="w")
 
     # ------------------------------------------------------------------
-    def _construire_tags_presets(self) -> None:
-        cadre = tk.LabelFrame(
-            self, text="Préréglages de tags (ajout rapide dans la vue liste)", padx=10, pady=10
-        )
-        cadre.pack(fill="x", padx=12, pady=6)
+    def _construire_tags_presets(self, parent: tk.Widget) -> None:
+        cadre = tk.LabelFrame(parent, text="Préréglages de tags (ajout rapide)", padx=10, pady=10)
+        cadre.pack(fill="x", padx=10, pady=(10, 6))
 
         self.presets_liste_frame = tk.Frame(cadre)
         self.presets_liste_frame.pack(fill="x")
@@ -123,7 +131,7 @@ class FenetreOptions(tk.Toplevel):
         self.nouveau_preset_entry.pack(side="left", fill="x", expand=True)
         self.nouveau_preset_entry.bind("<Return>", lambda e: self._ajouter_preset())
         tk.Button(
-            ajout_frame, text="Ajouter un préréglage", command=self._ajouter_preset
+            ajout_frame, text="Ajouter", command=self._ajouter_preset
         ).pack(side="left", padx=(6, 0))
 
     def _rendre_liste_presets(self) -> None:
@@ -164,18 +172,16 @@ class FenetreOptions(tk.Toplevel):
         self._rendre_liste_tags()
 
     # ------------------------------------------------------------------
-    def _construire_tags_masquants(self) -> None:
-        cadre = tk.LabelFrame(
-            self, text="Tags masquants (cachent les skins qui les portent)", padx=10, pady=10
-        )
-        cadre.pack(fill="both", expand=True, padx=12, pady=6)
+    def _construire_tags_masquants(self, parent: tk.Widget) -> None:
+        cadre = tk.LabelFrame(parent, text="Tags masquants", padx=10, pady=10)
+        cadre.pack(fill="both", expand=True, padx=10, pady=6)
 
         tk.Label(
             cadre,
             text="Coche un tag pour masquer partout les skins qui le portent.",
             justify="left",
             fg="gray",
-            wraplength=320,
+            wraplength=360,
         ).pack(anchor="w", pady=(0, 8))
 
         zone = tk.Frame(cadre)
@@ -247,8 +253,48 @@ class FenetreOptions(tk.Toplevel):
         self._rendre_liste_tags()
 
     # ------------------------------------------------------------------
+    def _construire_entretien(self, parent: tk.Widget) -> None:
+        cadre = tk.LabelFrame(parent, text="VRoid Hub", padx=10, pady=10)
+        cadre.pack(fill="x", padx=10, pady=(10, 6))
+
+        tk.Label(
+            cadre,
+            text=(
+                "Renomme les skins encore nommés par leur identifiant "
+                "hub.vroid.com (ex. 6795810513740058493.vrm) en utilisant "
+                "le titre présent dans les métadonnées du fichier .vrm."
+            ),
+            justify="left",
+            fg="gray",
+            wraplength=360,
+        ).pack(anchor="w", pady=(0, 6))
+
+        tk.Button(
+            cadre,
+            text="Renommer les avatars VRoid Hub",
+            command=self._renommer_avatars_vroid_hub,
+        ).pack(anchor="w")
+
+    def _renommer_avatars_vroid_hub(self) -> None:
+        resultat = renommer_avatars_vroid_hub()
+
+        lignes = [f"{len(resultat['renommes'])} avatar(s) renommé(s)."]
+        if resultat["ignores"]:
+            lignes.append(f"{len(resultat['ignores'])} ignoré(s) (pas de titre dans les métadonnées).")
+        if resultat["erreurs"]:
+            lignes.append(f"{len(resultat['erreurs'])} erreur(s).")
+
+        if resultat["renommes"]:
+            lignes.append("")
+            lignes.extend(f"{ancien} → {nouveau}" for ancien, nouveau in resultat["renommes"][:15])
+            if len(resultat["renommes"]) > 15:
+                lignes.append("...")
+
+        messagebox.showinfo("Renommage VRoid Hub", "\n".join(lignes), parent=self)
+
+    # ------------------------------------------------------------------
     def _construire_bas(self) -> None:
-        tk.Button(self, text="Fermer", command=self._fermer).pack(pady=(0, 12))
+        tk.Button(self, text="Fermer", command=self._fermer).pack(pady=(0, 10))
 
     def _fermer(self) -> None:
         self.grab_release()

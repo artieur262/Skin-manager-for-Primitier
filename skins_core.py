@@ -181,6 +181,58 @@ def renommer_skin(skin_path: Path, nouveau_nom: str) -> Path:
     return destination
 
 
+TRADUCTION_CARACTERES_INTERDITS = str.maketrans({c: "-" for c in CARACTERES_INVALIDES})
+
+
+def _semble_venir_de_vroid_hub(skin_path: Path) -> bool:
+    """Un fichier téléchargé tel quel depuis hub.vroid.com est nommé avec un
+    identifiant numérique (ex. 6795810513740058493.vrm)."""
+    return skin_path.stem.isdigit()
+
+
+def renommer_avatars_vroid_hub() -> dict:
+    """Renomme les skins encore nommés par leur identifiant hub.vroid.com en
+    utilisant le titre présent dans les métadonnées VRM (extensions.VRM.meta.title).
+
+    Ne touche pas aux skins déjà renommés manuellement (nom non numérique).
+    Retourne un résumé : {"renommes": [(ancien, nouveau), ...], "ignores": [...], "erreurs": [...]}.
+    """
+    resultat = {"renommes": [], "ignores": [], "erreurs": []}
+
+    for skin_path in lister_skins():
+        if not _semble_venir_de_vroid_hub(skin_path):
+            continue
+
+        try:
+            meta = PREVIEW_GENERATOR.read_vrm_meta(skin_path)
+        except Exception as exc:
+            resultat["erreurs"].append((skin_path.name, str(exc)))
+            continue
+
+        titre = (meta.get("title") or "").strip()
+        nouveau_nom = titre.translate(TRADUCTION_CARACTERES_INTERDITS).strip(" .")
+        if not nouveau_nom:
+            resultat["ignores"].append(skin_path.name)
+            continue
+
+        candidat = nouveau_nom
+        suffixe = 2
+        while True:
+            destination_visee = SKINS_DIR / f"{candidat}.vrm"
+            if not destination_visee.exists() or destination_visee.resolve() == skin_path.resolve():
+                break
+            candidat = f"{nouveau_nom} ({suffixe})"
+            suffixe += 1
+
+        try:
+            destination = renommer_skin(skin_path, candidat)
+            resultat["renommes"].append((skin_path.name, destination.name))
+        except Exception as exc:
+            resultat["erreurs"].append((skin_path.name, str(exc)))
+
+    return resultat
+
+
 def appliquer_skin(skin_path: Path) -> Path:
     """Copie le skin choisi dans le dossier courant du script."""
     SKINS_DIR.mkdir(exist_ok=True)
