@@ -8,3 +8,5 @@ output/
 *.vrm
 test.png
 __pycache__/*
+.vscode/
+*.exe

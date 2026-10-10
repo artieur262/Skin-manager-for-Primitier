@@ -2,15 +2,30 @@
 Logique commune (non graphique) partagée par les différentes interfaces
 de sélection de skins (vue liste et vue grille).
 """
+import ctypes
 import json
 import shutil
+from ctypes import wintypes
 from pathlib import Path
 from tkinter import messagebox
 from typing import List, Optional
 
 from genreator import AvatarPreviewGenerator
 
-BASE_DIR = Path(__file__).resolve().parent
+
+def dossier_documents() -> Path:
+    """Dossier Documents de l'utilisateur Windows courant (même s'il a été
+    déplacé, par exemple dans OneDrive)."""
+    chemin = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+    # 5 = CSIDL_PERSONAL (Documents)
+    if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, chemin) == 0 and chemin.value:
+        return Path(chemin.value)
+    return Path.home() / "Documents"
+
+
+# Chemin absolu, calculé pour l'utilisateur courant : les scripts marchent quel
+# que soit le dossier où ils sont rangés et celui depuis lequel on les lance.
+BASE_DIR = dossier_documents() / "Primitier" / "Avatars"
 SKINS_DIR = BASE_DIR / "skins"
 APERCU_DIR = BASE_DIR / "apercus"
 OPTIONS_DIR = BASE_DIR / "options"
