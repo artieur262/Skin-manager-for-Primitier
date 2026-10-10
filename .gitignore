@@ -7,5 +7,4 @@ __pycache__/
 output/
 *.vrm
 test.png
-__pycache__/genreator.cpython-36.pyc
-__pycache__/genreator.cpython-36.pyc
+__pycache__/*
